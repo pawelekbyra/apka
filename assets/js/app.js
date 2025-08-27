@@ -154,6 +154,7 @@ import API from './modules/api.js';
 import UI from './modules/ui.js';
 import VideoManager from './modules/video.js';
 import AccountPanel from './modules/account.js';
+import Comments from './modules/comments.js';
 import { initializeHandlers } from './modules/handlers.js';
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -252,6 +253,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 _setInitialConfig();
                 initializeHandlers({ fetchAndUpdateSlideData: _fetchAndUpdateSlideData });
                 AccountPanel.init();
+                Comments.init();
                 _initializePreloader();
                 document.body.classList.add('loaded');
             },

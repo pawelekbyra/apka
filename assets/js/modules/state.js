@@ -1,3 +1,5 @@
+import { slidesData } from './config.js';
+
 const State = (function() {
     const _state = {
         isUserLoggedIn: (typeof TingTongData !== 'undefined' && TingTongData.isLoggedIn) || false,
@@ -14,6 +16,9 @@ const State = (function() {
         get: (key) => _state[key],
         set: (key, value) => { _state[key] = value; },
         getState: () => ({ ..._state }),
+        getSlideDataByLikeId: (likeId) => {
+            return slidesData.find(slide => String(slide.likeId) === String(likeId));
+        }
     };
 })();
 
