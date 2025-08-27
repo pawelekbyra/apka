@@ -150,7 +150,6 @@ const VideoManager = (function() {
             if (!(isSecret && !State.get('isUserLoggedIn')) && !State.get('isAutoplayBlocked')) {
                 _guardedPlay(newVideo);
             }
-            _startProgressUpdates(newVideo);
         }
     }
 
@@ -190,7 +189,15 @@ const VideoManager = (function() {
         initProgressBar: (progressEl, videoEl) => {
             if (!progressEl || !videoEl) return;
             progressEl.classList.add('skeleton');
-            videoEl.addEventListener('loadedmetadata', () => progressEl.classList.remove('skeleton'), { once: true });
+
+            videoEl.addEventListener('loadedmetadata', () => {
+                progressEl.classList.remove('skeleton');
+                _updateProgressUI(videoEl);
+            }, { once: true });
+
+            // Make progress updates event-driven
+            videoEl.addEventListener('play', () => _startProgressUpdates(videoEl));
+            videoEl.addEventListener('pause', () => _stopProgressUpdates(videoEl));
 
             let pointerId = null;
             const seek = (e) => {
@@ -228,12 +235,26 @@ const VideoManager = (function() {
 
             progressEl.addEventListener('keydown', (e) => {
                 if (!videoEl.duration) return;
-                const step = videoEl.duration * 0.05;
+                const step = videoEl.duration * 0.05; // 5% jump
+                let newTime;
                 switch (e.key) {
-                    case 'ArrowLeft': videoEl.currentTime -= step; break;
-                    case 'ArrowRight': videoEl.currentTime += step; break;
-                    default: return;
+                    case 'ArrowLeft':
+                        newTime = videoEl.currentTime - step;
+                        break;
+                    case 'ArrowRight':
+                        newTime = videoEl.currentTime + step;
+                        break;
+                    case 'Home':
+                        newTime = 0;
+                        break;
+                    case 'End':
+                        newTime = videoEl.duration;
+                        break;
+                    default:
+                        return;
                 }
+                videoEl.currentTime = Math.max(0, Math.min(newTime, videoEl.duration));
+                _updateProgressUI(videoEl); // Update UI immediately on key press
                 e.preventDefault();
             });
         },
