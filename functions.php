@@ -321,8 +321,8 @@ add_shortcode( 'tt_login_form', 'tt_login_form_shortcode' );
 /* ========================================================================
  * JEDYNA ZMIANA — TT Konto (AJAX) — BEZ logowania/wylogowania/polubień
  * Ten blok to wyczyszczona wersja sandboxa służąca wyłącznie do obsługi formularza "Konto".
- * Źródło: phpsandbox.txt (obsługa profilu/hasła/avatara/konta)
- * Pozostawiamy bez zmian: funkszynorginal.txt (logowanie, wylogowanie, lajki, nonce)
+ * Źródło: phpsandbox.txt (obsługa profilu/hasła/avatara/konta) :contentReference[oaicite:0]{index=0}
+ * Pozostawiamy bez zmian: funkszynorginal.txt (logowanie, wylogowanie, lajki, nonce) :contentReference[oaicite:1]{index=1}
  * ======================================================================== */
 
 /* ========================================================================
