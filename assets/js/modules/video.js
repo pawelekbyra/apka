@@ -188,16 +188,25 @@ const VideoManager = (function() {
         },
         initProgressBar: (progressEl, videoEl) => {
             if (!progressEl || !videoEl) return;
-            progressEl.classList.add('skeleton');
 
+            // Attach listeners to the video element, which is always unique for this call
             videoEl.addEventListener('loadedmetadata', () => {
-                progressEl.classList.remove('skeleton');
+                // Only remove skeleton if the video is for the currently active slide
+                if (UI.DOM.masterBottombar.contains(progressEl)) {
+                    progressEl.classList.remove('skeleton');
+                }
                 _updateProgressUI(videoEl);
             }, { once: true });
 
-            // Make progress updates event-driven
             videoEl.addEventListener('play', () => _startProgressUpdates(videoEl));
             videoEl.addEventListener('pause', () => _stopProgressUpdates(videoEl));
+
+            // Only attach listeners to the progress bar element ONCE
+            if (progressEl.dataset.initialized) {
+                return;
+            }
+            progressEl.dataset.initialized = 'true';
+            progressEl.classList.add('skeleton');
 
             let pointerId = null;
             const seek = (e) => {
