@@ -299,21 +299,33 @@ function tt_enqueue_and_localize_scripts() {
 			'nonce'    => wp_create_nonce( 'tt_ajax_nonce' ),
 		]
 	);
+
+	// Dołączanie skryptu "Buy Me a Coffee"
+	wp_enqueue_script(
+		'tt-bmc-widget',
+		'https://cdnjs.buymeacoffee.com/1.0.0/widget.prod.min.js',
+		[],
+		'1.0.0',
+		true
+	);
 }
 add_action( 'wp_enqueue_scripts', 'tt_enqueue_and_localize_scripts' );
 
 /**
- * Dodaje atrybut type="module" do naszego głównego skryptu aplikacji.
- * Jest to niezbędne dla nowoczesnego kodu JavaScript opartego na modułach ES6.
+ * Dodaje atrybuty do tagów skryptów (type="module" dla app.js i data-* dla BMC).
  */
-function tt_add_module_type_to_script( $tag, $handle, $src ) {
+function tt_add_attributes_to_scripts( $tag, $handle, $src ) {
 	if ( 'tt-main-app' === $handle ) {
-		// Tworzymy tag skryptu z atrybutem type="module".
 		$tag = '<script type="module" src="' . esc_url( $src ) . '" id="' . esc_attr( $handle ) . '-js"></script>';
 	}
+
+	if ( 'tt-bmc-widget' === $handle ) {
+		$tag = '<script data-name="BMC-Widget" data-cfasync="false" src="' . esc_url( $src ) . '" data-id="pawelperfect" data-description="Support me on Buy me a coffee!" data-message="" data-color="#FF5F5F" data-position="Right" data-x_margin="18" data-y_margin="18"></script>';
+	}
+
 	return $tag;
 }
-add_filter( 'script_loader_tag', 'tt_add_module_type_to_script', 10, 3 );
+add_filter( 'script_loader_tag', 'tt_add_attributes_to_scripts', 10, 3 );
 
 // =========================================================================
 // 3. HANDLERY AJAX (Logowanie, Wylogowanie, Lajkowanie i Nonce)
