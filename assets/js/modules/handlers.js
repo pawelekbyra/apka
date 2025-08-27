@@ -6,6 +6,7 @@ import VideoManager from './video.js';
 import { slidesData } from './config.js';
 import AccountPanel from './account.js';
 import Notifications from './notifications.js';
+import Comments from './comments.js';
 
 function initializeHandlers(app) {
     function handleNotificationClick(event) {
@@ -130,7 +131,15 @@ function initializeHandlers(app) {
             case 'toggle-like': handleLikeToggle(actionTarget); break;
             case 'share': handleShare(actionTarget); break;
             case 'toggle-language': handleLanguageToggle(); break;
-            case 'open-comments-modal': UI.openModal(UI.DOM.commentsModal); break;
+            case 'open-comments-modal':
+                if (State.get('isUserLoggedIn')) {
+                    const likeId = actionTarget.dataset.likeId;
+                    if (likeId) Comments.open(likeId);
+                } else {
+                    Utils.vibrateTry();
+                    UI.showAlert(Utils.getTranslation('commentsLoginAlert'));
+                }
+                break;
             case 'open-info-modal': UI.openModal(UI.DOM.infoModal); break;
             case 'open-account-modal':
                 if(section) section.querySelector('.logged-in-menu').classList.remove('active');

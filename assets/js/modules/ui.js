@@ -1,19 +1,34 @@
 import State from './state.js';
 import Utils from './utils.js';
 import { slidesData, Config } from './config.js';
+import VideoManager from './video.js';
 
 const UI = (function() {
     const DOM = {
-        container: document.getElementById('webyx-container'),
-        template: document.getElementById('slide-template'),
-        preloader: document.getElementById('preloader'),
-        alertBox: document.getElementById('alertBox'),
-        alertText: document.getElementById('alertText'),
-        infoModal: document.getElementById('infoModal'),
-        commentsModal: document.getElementById('commentsModal'),
-        accountModal: document.getElementById('accountModal'),
-        notificationPopup: document.getElementById('notificationPopup'),
+        container: null,
+        template: null,
+        preloader: null,
+        alertBox: null,
+        alertText: null,
+        infoModal: null,
+        commentsModal: null,
+        accountModal: null,
+        notificationPopup: null,
     };
+
+    function init() {
+        // Query for all DOM elements once the DOM is ready
+        DOM.container = document.getElementById('webyx-container');
+        DOM.template = document.getElementById('slide-template');
+        DOM.preloader = document.getElementById('preloader');
+        DOM.alertBox = document.getElementById('alertBox');
+        DOM.alertText = document.getElementById('alertText');
+        DOM.infoModal = document.getElementById('infoModal');
+        DOM.commentsModal = document.getElementById('commentsModal');
+        DOM.accountModal = document.getElementById('accountModal');
+        DOM.notificationPopup = document.getElementById('notificationPopup');
+    }
+
     let alertTimeout;
 
     function showAlert(message, isError = false) {
@@ -53,7 +68,7 @@ const UI = (function() {
 
     function openModal(modal) {
         State.set('lastFocusedElement', document.activeElement);
-        DOM.container.setAttribute('aria-hidden', 'true');
+        if (DOM.container) DOM.container.setAttribute('aria-hidden', 'true');
         modal.classList.add('visible');
         modal.setAttribute('aria-hidden', 'false');
         const focusable = getFocusable(modal);
@@ -65,7 +80,7 @@ const UI = (function() {
         modal.classList.remove('visible');
         modal.setAttribute('aria-hidden', 'true');
         if (modal._focusTrapDispose) { modal._focusTrapDispose(); delete modal._focusTrapDispose; }
-        DOM.container.removeAttribute('aria-hidden');
+        if (DOM.container) DOM.container.removeAttribute('aria-hidden');
         State.get('lastFocusedElement')?.focus();
     }
 
@@ -89,32 +104,39 @@ const UI = (function() {
 
     function updateUIForLoginState() {
         const isLoggedIn = State.get('isUserLoggedIn');
-
         document.body.classList.toggle('is-logged-in', isLoggedIn);
 
         document.querySelectorAll('.webyx-section').forEach((section) => {
             const sim = section.querySelector('.tiktok-symulacja');
             if (!sim) return;
+
             sim.classList.toggle('is-logged-in', isLoggedIn);
 
-            const isSecret = sim.dataset.access === 'secret';
-            const showSecretOverlay = isSecret && !isLoggedIn;
-
-            section.querySelector('.secret-overlay')?.classList.toggle('visible', showSecretOverlay);
-            section.querySelector('.videoPlayer')?.classList.toggle('secret-active', showSecretOverlay);
-            section.querySelector('.topbar .central-text-wrapper')?.classList.toggle('with-arrow', !isLoggedIn);
+            const topbarText = section.querySelector('.topbar-text');
+            if (topbarText) {
+                topbarText.textContent = isLoggedIn ? Utils.getTranslation('loggedInText') : Utils.getTranslation('loggedOutText');
+            }
+            section.querySelector('.central-text-wrapper')?.classList.toggle('with-arrow', !isLoggedIn);
             section.querySelector('.login-panel')?.classList.remove('active');
             section.querySelector('.topbar')?.classList.remove('login-panel-active');
             section.querySelector('.logged-in-menu')?.classList.remove('active');
-            const topbarText = section.querySelector('.topbar .topbar-text');
-            if(topbarText) topbarText.textContent = isLoggedIn ? Utils.getTranslation('loggedInText') : Utils.getTranslation('loggedOutText');
 
             const likeBtn = section.querySelector('.like-button');
             if (likeBtn) {
-                const slide = slidesData.find(s => String(s.likeId) === String(likeBtn.dataset.likeId));
-                if (slide) {
-                    updateLikeButtonState(likeBtn, !!(slide.isLiked && isLoggedIn), Number(slide.initialLikes || 0));
+                const slideData = slidesData.find(s => s.likeId === likeBtn.dataset.likeId);
+                if (slideData) {
+                    updateLikeButtonState(likeBtn, !!(slideData.isLiked && isLoggedIn), Number(slideData.initialLikes || 0));
                 }
+            }
+
+            const isSecret = sim.dataset.access === 'secret';
+            const showSecretOverlay = isSecret && !isLoggedIn;
+            section.querySelector('.secret-overlay')?.classList.toggle('visible', showSecretOverlay);
+            section.querySelector('.videoPlayer')?.classList.toggle('secret-active', showSecretOverlay);
+
+            const isActive = parseInt(section.dataset.index, 10) === State.get('currentSlideIndex');
+            if (isActive) {
+                VideoManager.updatePlaybackForLoginChange(section);
             }
         });
     }
@@ -122,10 +144,37 @@ const UI = (function() {
     function updateTranslations() {
         const lang = State.get('currentLang');
         document.documentElement.lang = lang;
-        document.querySelectorAll('[data-translate-key]').forEach(el => el.textContent = Utils.getTranslation(el.dataset.translateKey));
+        document.querySelectorAll('[data-translate-key]').forEach(el => {
+            el.textContent = Utils.getTranslation(el.dataset.translateKey)
+        });
         document.querySelectorAll('[data-translate-aria-label]').forEach(el => el.setAttribute('aria-label', Utils.getTranslation(el.dataset.translateAriaLabel)));
         document.querySelectorAll('[data-translate-title]').forEach(el => el.setAttribute('title', Utils.getTranslation(el.dataset.translateTitle)));
         updateUIForLoginState();
+    }
+
+    function updateCommentCount(section, count) {
+        const btn = section.querySelector('.commentsButton');
+        if (!btn) return;
+        let countEl = btn.querySelector('.comment-count');
+        if (!countEl) {
+            countEl = document.createElement('div');
+            countEl.className = 'comment-count icon-label';
+            btn.appendChild(countEl);
+        }
+        countEl.textContent = Utils.formatCount(count);
+    }
+
+    function formatTimeAgo(date, lang = 'pl') {
+        const now = new Date();
+        const seconds = Math.round((now - date) / 1000);
+        const minutes = Math.round(seconds / 60);
+        const hours = Math.round(minutes / 60);
+        const days = Math.round(hours / 24);
+        const rtf = new Intl.RelativeTimeFormat(lang, { numeric: 'auto' });
+        if (seconds < 60) return rtf.format(-seconds, 'second');
+        if (minutes < 60) return rtf.format(-minutes, 'minute');
+        if (hours < 24) return rtf.format(-hours, 'hour');
+        return rtf.format(-days, 'day');
     }
 
     function createSlideElement(slideData, index) {
@@ -133,6 +182,27 @@ const UI = (function() {
         const section = slideFragment.querySelector('.webyx-section');
         section.dataset.index = index;
         section.dataset.slideId = slideData.id;
+
+        const sim = section.querySelector('.tiktok-symulacja');
+        sim.dataset.access = slideData.access;
+
+        const videoPlayer = section.querySelector('.videoPlayer');
+        videoPlayer.poster = slideData.poster || Config.LQIP_POSTER;
+        VideoManager.initVideoElementListeners(videoPlayer);
+
+        section.querySelector('.profileButton img').src = slideData.avatar;
+        const likeBtn = section.querySelector('.like-button');
+        likeBtn.dataset.likeId = slideData.likeId;
+        updateLikeButtonState(likeBtn, slideData.isLiked, slideData.initialLikes);
+
+        const commentsBtn = section.querySelector('.commentsButton');
+        if(commentsBtn) {
+            commentsBtn.dataset.likeId = slideData.likeId;
+            updateCommentCount(section, slideData.initialComments);
+        }
+
+        section.querySelector('.text-user').textContent = slideData.user;
+        section.querySelector('.text-description').textContent = slideData.description;
 
         const loginPanel = section.querySelector('.login-panel');
         const renderedForm = document.getElementById('um-login-render-container');
@@ -149,15 +219,8 @@ const UI = (function() {
             }
         }
 
-        section.querySelector('.tiktok-symulacja').dataset.access = slideData.access;
-        section.querySelector('.videoPlayer').poster = slideData.poster || Config.LQIP_POSTER;
-        section.querySelector('.profileButton img').src = slideData.avatar;
-        section.querySelector('.text-user').textContent = slideData.user;
-        section.querySelector('.text-description').textContent = slideData.description;
-
-        const likeBtn = section.querySelector('.like-button');
-        likeBtn.dataset.likeId = slideData.likeId;
-        updateLikeButtonState(likeBtn, slideData.isLiked, slideData.initialLikes);
+        const progressSlider = section.querySelector('.video-progress');
+        VideoManager.initProgressBar(progressSlider, videoPlayer);
 
         return section;
     }
@@ -184,6 +247,7 @@ const UI = (function() {
     }
 
     return {
+        init,
         DOM,
         showAlert,
         openModal,
@@ -191,7 +255,9 @@ const UI = (function() {
         updateUIForLoginState,
         updateTranslations,
         applyLikeStateToDom,
-        renderSlides
+        renderSlides,
+        updateCommentCount,
+        formatTimeAgo,
     };
 })();
 

@@ -15,7 +15,7 @@ Ting Tong to aplikacja typu **PWA (Progressive Web App)**, tworzona w czystym HT
 
 Funkcjonalnie dążymy do stworzenia prostego, pionowego feedu wideo, zoptymalizowanego pod kątem urządzeń mobilnych.
 
-### Backend
+### Backend.
 
 Backend jest obecnie oparty na **dedykowanym, minimalistycznym motywie WordPress**, który dostarcza wszystkie niezbędne funkcje, API oraz logikę w PHP.
 
