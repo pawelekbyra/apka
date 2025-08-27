@@ -75,6 +75,13 @@ const API = (function() {
             }
         },
         addComment: (postId, comment) => _request('tt_add_comment', { post_id: postId, comment: comment }),
+
+        // --- Account Panel API ---
+        uploadAvatar: (dataUrl) => _request('tt_avatar_upload', { image: dataUrl }),
+        updateProfile: (data) => _request('tt_profile_update', data),
+        changePassword: (data) => _request('tt_password_change', data),
+        deleteAccount: (confirmText) => _request('tt_account_delete', { confirm_text: confirmText }),
+        loadUserProfile: () => _request('tt_profile_get'),
     };
 })();
 

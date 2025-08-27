@@ -1,6 +1,7 @@
 import State from './state.js';
 import { Config, slidesData } from './config.js';
 import Utils from './utils.js';
+import UI from './ui.js';
 
 const VideoManager = (function() {
     let hlsPromise = null;
@@ -118,12 +119,22 @@ const VideoManager = (function() {
 
     function _updateProgressUI(video) {
         if (State.get('isDraggingProgress') || !video || !video.duration) return;
+        const percent = (video.currentTime / video.duration) * 100;
         const section = video.closest('.webyx-section');
         if (!section) return;
-        const percent = (video.currentTime / video.duration) * 100;
-        section.querySelector('.progress-line').style.width = `${percent}%`;
-        section.querySelector('.progress-dot').style.left = `${percent}%`;
-        section.querySelector('.video-progress').setAttribute('aria-valuenow', String(Math.round(percent)));
+
+        const line = section.querySelector('.progress-line');
+        const dot = section.querySelector('.progress-dot');
+        const progressEl = section.querySelector('.video-progress');
+
+        if (line) line.style.width = `${percent}%`;
+        if (dot) dot.style.left = `${percent}%`;
+        if (progressEl) {
+            progressEl.setAttribute('aria-valuenow', String(Math.round(percent)));
+            if(progressEl.classList.contains('skeleton')) {
+                progressEl.classList.remove('skeleton');
+            }
+        }
     };
 
     function _onActiveSlideChanged(newIndex, oldIndex = -1, allSections) {
@@ -132,14 +143,13 @@ const VideoManager = (function() {
         if (oldIndex > -1 && oldIndex < allSections.length) {
             const oldSection = allSections[oldIndex];
             const oldVideo = oldSection.querySelector('.videoPlayer');
-            if (oldVideo) { oldVideo.pause(); _stopProgressUpdates(oldVideo); }
-            oldSection.querySelector('.pause-icon')?.classList.remove('visible');
-            const progressLine = oldSection.querySelector('.progress-line');
-            const progressDot = oldSection.querySelector('.progress-dot');
-            if(progressLine && progressDot) {
-                progressLine.style.width = '0%';
-                progressDot.style.left = '0%';
+            if (oldVideo) {
+                oldVideo.pause();
+                _stopProgressUpdates(oldVideo);
+                oldVideo.currentTime = 0; // Reset video progress
+                _updateProgressUI(oldVideo); // Update UI to show reset progress
             }
+            oldSection.querySelector('.pause-icon')?.classList.remove('visible');
         }
 
         if (newIndex < allSections.length) {
@@ -186,26 +196,29 @@ const VideoManager = (function() {
 
             sections.forEach(section => playObserver.observe(section));
         },
-        initProgressBar: (progressEl, videoEl) => {
-            if (!progressEl || !videoEl) return;
-            progressEl.classList.add('skeleton');
-
-            videoEl.addEventListener('loadedmetadata', () => {
-                progressEl.classList.remove('skeleton');
-                _updateProgressUI(videoEl);
-            }, { once: true });
-
-            // Make progress updates event-driven
+        initVideoElementListeners: (videoEl) => {
+            if (!videoEl) return;
+            videoEl.addEventListener('loadedmetadata', () => _updateProgressUI(videoEl));
             videoEl.addEventListener('play', () => _startProgressUpdates(videoEl));
             videoEl.addEventListener('pause', () => _stopProgressUpdates(videoEl));
+            videoEl.addEventListener('timeupdate', () => _updateProgressUI(videoEl));
+        },
+        initProgressBar: (progressEl, videoEl) => {
+            if (!progressEl || !videoEl || progressEl.dataset.initialized) {
+                return;
+            }
+            progressEl.dataset.initialized = 'true';
+            progressEl.classList.add('skeleton');
 
             let pointerId = null;
             const seek = (e) => {
+                if (!videoEl.duration) return;
+
                 const rect = progressEl.getBoundingClientRect();
                 const x = ('clientX' in e ? e.clientX : (e.touches?.[0]?.clientX || 0));
                 const percent = ((x - rect.left) / rect.width) * 100;
                 const clamped = Math.max(0, Math.min(100, percent));
-                if (videoEl.duration) videoEl.currentTime = (clamped / 100) * videoEl.duration;
+                videoEl.currentTime = (clamped / 100) * videoEl.duration;
                 _updateProgressUI(videoEl);
             };
 
@@ -235,26 +248,18 @@ const VideoManager = (function() {
 
             progressEl.addEventListener('keydown', (e) => {
                 if (!videoEl.duration) return;
-                const step = videoEl.duration * 0.05; // 5% jump
+
+                const step = videoEl.duration * 0.05;
                 let newTime;
                 switch (e.key) {
-                    case 'ArrowLeft':
-                        newTime = videoEl.currentTime - step;
-                        break;
-                    case 'ArrowRight':
-                        newTime = videoEl.currentTime + step;
-                        break;
-                    case 'Home':
-                        newTime = 0;
-                        break;
-                    case 'End':
-                        newTime = videoEl.duration;
-                        break;
-                    default:
-                        return;
+                    case 'ArrowLeft': newTime = videoEl.currentTime - step; break;
+                    case 'ArrowRight': newTime = videoEl.currentTime + step; break;
+                    case 'Home': newTime = 0; break;
+                    case 'End': newTime = videoEl.duration; break;
+                    default: return;
                 }
                 videoEl.currentTime = Math.max(0, Math.min(newTime, videoEl.duration));
-                _updateProgressUI(videoEl); // Update UI immediately on key press
+                _updateProgressUI(videoEl);
                 e.preventDefault();
             });
         },
