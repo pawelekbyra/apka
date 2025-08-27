@@ -1,6 +1,7 @@
 import State from './state.js';
 import Utils from './utils.js';
 import { slidesData, Config } from './config.js';
+import VideoManager from './video.js';
 
 const UI = (function() {
     const DOM = {
@@ -264,7 +265,11 @@ const UI = (function() {
 
         // Set only the data unique to the slide's own structure
         section.querySelector('.tiktok-symulacja').dataset.access = slideData.access;
-        section.querySelector('.videoPlayer').poster = slideData.poster || Config.LQIP_POSTER;
+        const videoPlayer = section.querySelector('.videoPlayer');
+        videoPlayer.poster = slideData.poster || Config.LQIP_POSTER;
+
+        // Initialize listeners for this specific video element
+        VideoManager.initVideoElementListeners(videoPlayer);
 
         return section;
     }

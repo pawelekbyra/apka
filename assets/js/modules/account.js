@@ -1,3 +1,5 @@
+import API from './api.js';
+
 const AccountPanel = (function(){
     // Global variables for the panel
     let cropImage = null;
@@ -25,27 +27,6 @@ const AccountPanel = (function(){
         setupEventListeners();
         loadUserSettings();
     }
-
-    // API Calls specific to Account Panel
-    async function apiRequest(action, data = {}) {
-        const body = new URLSearchParams({ action, nonce: window.ajax_object.nonce });
-        for(const key in data) { body.append(key, data[key]); }
-        try {
-            const response = await fetch(window.ajax_object.ajax_url, { method: 'POST', body, credentials: 'same-origin' });
-            if (!response.ok) throw new Error(`Błąd serwera: ${response.status}`);
-            const result = await response.json();
-            if (result.new_nonce) window.ajax_object.nonce = result.new_nonce;
-            return result;
-        } catch (error) {
-            console.error(`Błąd API dla akcji "${action}":`, error);
-            return { success: false, data: { message: error.message } };
-        }
-    }
-    async function uploadAvatar(dataUrl) { return apiRequest('tt_avatar_upload', { image: dataUrl }); }
-    async function updateProfile(data) { return apiRequest('tt_profile_update', data); }
-    async function changePassword(data) { return apiRequest('tt_password_change', data); }
-    async function deleteAccount(confirmText) { return apiRequest('tt_account_delete', { confirm_text: confirmText }); }
-    async function loadUserProfile() { return apiRequest('tt_profile_get'); }
 
     // Load user settings - MOCK
     async function loadUserSettings() {
@@ -104,7 +85,7 @@ const AccountPanel = (function(){
     // Profile data functions
     async function loadInitialProfileData() {
         try {
-            const result = await loadUserProfile();
+            const result = await API.loadUserProfile();
             if (result.success) {
                 populateProfileForm(result.data);
             } else {
@@ -282,7 +263,7 @@ const AccountPanel = (function(){
             outputCtx.drawImage(cropImage, srcX, srcY, srcSize, srcSize, 0, 0, 200, 200);
 
             const dataUrl = outputCanvas.toDataURL('image/png', 0.9);
-            const result = await uploadAvatar(dataUrl);
+            const result = await API.uploadAvatar(dataUrl);
 
             if (result.success && result.data?.url) {
                 const newAvatarUrl = result.data.url + '?t=' + Date.now();
@@ -312,7 +293,7 @@ const AccountPanel = (function(){
             const data = { first_name: document.getElementById('firstName').value.trim(), last_name: document.getElementById('lastName').value.trim(), email: document.getElementById('email').value.trim() };
             if (!data.first_name || !data.last_name || !data.email) throw new Error('Wszystkie pola są wymagane.');
             if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email)) throw new Error('Podaj prawidłowy adres email.');
-            const result = await updateProfile(data);
+            const result = await API.updateProfile(data);
             if (result.success) {
                 showSuccess('profileSuccess', 'Profil został zaktualizowany!');
                 populateProfileForm(result.data);
@@ -336,7 +317,7 @@ const AccountPanel = (function(){
             if (!currentPassword || !newPassword || !confirmPassword) throw new Error('Wszystkie pola są wymagane.');
             if (newPassword.length < 8) throw new Error('Nowe hasło musi mieć minimum 8 znaków.');
             if (newPassword !== confirmPassword) throw new Error('Nowe hasła muszą być identyczne.');
-            const result = await changePassword({ current_password: currentPassword, new_password_1: newPassword, new_password_2: confirmPassword });
+                    const result = await API.changePassword({ current_password: currentPassword, new_password_1: newPassword, new_password_2: confirmPassword });
             if (result.success) {
                 showSuccess('passwordSuccess', 'Hasło zostało zmienione!');
                 document.getElementById('passwordForm').reset();
@@ -358,7 +339,7 @@ const AccountPanel = (function(){
         try {
             const confirmText = document.getElementById('deleteConfirmation').value;
             if (confirmText.trim() !== 'USUWAM KONTO') throw new Error('Wpisz dokładnie: USUWAM KONTO');
-            const result = await deleteAccount(confirmText);
+            const result = await API.deleteAccount(confirmText);
             if (result.success) {
                 showSuccess('deleteSuccess', 'Konto zostało usunięte. Trwa wylogowywanie...');
                 setTimeout(() => window.location.reload(), 2000);
