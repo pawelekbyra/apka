@@ -344,7 +344,14 @@
     <!-- Hidden file input -->
     <input type="file" class="file-input" id="avatarFileInput" accept="image/*">
     <!-- Hidden containers for WordPress to render shortcodes -->
-    <div id="um-login-render-container" style="display: none;"><?php echo do_shortcode('[tt_login_form]'); ?></div>
+    <div id="um-login-render-container" style="display: none;"><?php
+    if (function_exists('tt_login_form_shortcode')) {
+        echo tt_login_form_shortcode();
+    } else {
+        // Fallback to original behavior if function doesn't exist for some reason
+        echo do_shortcode('[tt_login_form]');
+    }
+    ?></div>
 
     <script id="tt-patch-2025-08-18">
     (() => {
