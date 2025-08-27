@@ -2,7 +2,7 @@
 
     <div id="preloader">
         <div class="preloader-icon-container">
-            <img src="https://www.polutek.pl/wp-content/uploads/2025/07/output-onlinepngtools-1-1.png" alt="Ting Tong Logo" class="splash-icon">
+            <img src="https://pawelperfect.pl/wp-content/uploads/2025/07/output-onlinepngtools-1-1.png" alt="Ting Tong Logo" class="splash-icon">
         </div>
         <div class="preloader-content-container">
             <div class="language-selection">

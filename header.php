@@ -25,7 +25,7 @@
     <!-- PATCH: iOS PWA cosmetics -->
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <link rel="apple-touch-icon" href="https://www.polutek.pl/wp-content/uploads/2025/07/output-onlinepngtools-1-1.png">
+    <link rel="apple-touch-icon" href="https://pawelperfect.pl/wp-content/uploads/2025/07/output-onlinepngtools-1-1.png">
     <!-- PATCH: TODO - Add iOS splash screens for different devices -->
     <!--
     <link href="splash/iphone5_splash.png" media="(device-width: 320px) and (device-height: 568px) and (-webkit-device-pixel-ratio: 2)" rel="apple-touch-startup-image" />
@@ -41,9 +41,9 @@
     -->
 
     <!-- Networking hints -->
-    <link rel="preconnect" href="https://www.polutek.pl" crossorigin>
+    <link rel="preconnect" href="https://pawelperfect.pl" crossorigin>
     <link rel="preconnect" href="https://i.pravatar.cc" crossorigin>
-    <link rel="dns-prefetch" href="//www.polutek.pl">
+    <link rel="dns-prefetch" href="//pawelperfect.pl">
     <link rel="dns-prefetch" href="//i.pravatar.cc">
     <?php wp_head(); ?>
 </head>
