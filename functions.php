@@ -1,3 +1,4 @@
+<?php
 /**
  * Plik functions.php dla motywu Ting Tong.
  *
