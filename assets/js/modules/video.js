@@ -1,6 +1,7 @@
 import State from './state.js';
 import { Config, slidesData } from './config.js';
 import Utils from './utils.js';
+import UI from './ui.js';
 
 const VideoManager = (function() {
     let hlsPromise = null;
@@ -134,16 +135,15 @@ const VideoManager = (function() {
             const oldVideo = oldSection.querySelector('.videoPlayer');
             if (oldVideo) { oldVideo.pause(); _stopProgressUpdates(oldVideo); }
             oldSection.querySelector('.pause-icon')?.classList.remove('visible');
-            const progressLine = oldSection.querySelector('.progress-line');
-            const progressDot = oldSection.querySelector('.progress-dot');
-            if(progressLine && progressDot) {
-                progressLine.style.width = '0%';
-                progressDot.style.left = '0%';
-            }
+            // The progress bar is now part of the master UI, so we don't need to reset it per slide here.
         }
 
         if (newIndex < allSections.length) {
             const newSection = allSections[newIndex];
+
+            // Attach the master UI to the new active slide
+            UI.attachUIToSlide(newSection);
+
             const newVideo = newSection.querySelector('.videoPlayer');
             const isSecret = newSection.querySelector('.tiktok-symulacja').dataset.access === 'secret';
 
@@ -188,16 +188,25 @@ const VideoManager = (function() {
         },
         initProgressBar: (progressEl, videoEl) => {
             if (!progressEl || !videoEl) return;
-            progressEl.classList.add('skeleton');
 
+            // Attach listeners to the video element, which is always unique for this call
             videoEl.addEventListener('loadedmetadata', () => {
-                progressEl.classList.remove('skeleton');
+                // Only remove skeleton if the video is for the currently active slide
+                if (UI.DOM.masterBottombar.contains(progressEl)) {
+                    progressEl.classList.remove('skeleton');
+                }
                 _updateProgressUI(videoEl);
             }, { once: true });
 
-            // Make progress updates event-driven
             videoEl.addEventListener('play', () => _startProgressUpdates(videoEl));
             videoEl.addEventListener('pause', () => _stopProgressUpdates(videoEl));
+
+            // Only attach listeners to the progress bar element ONCE
+            if (progressEl.dataset.initialized) {
+                return;
+            }
+            progressEl.dataset.initialized = 'true';
+            progressEl.classList.add('skeleton');
 
             let pointerId = null;
             const seek = (e) => {
