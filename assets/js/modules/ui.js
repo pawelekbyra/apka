@@ -1,6 +1,7 @@
 import State from './state.js';
 import Utils from './utils.js';
 import { slidesData, Config } from './config.js';
+import VideoManager from './video.js';
 
 const UI = (function() {
     const DOM = {
@@ -13,12 +14,6 @@ const UI = (function() {
         commentsModal: null,
         accountModal: null,
         notificationPopup: null,
-        masterUIContainer: null,
-        masterTopbar: null,
-        masterSidebar: null,
-        masterBottombar: null,
-        masterLoginPanel: null,
-        masterLoggedInMenu: null,
     };
 
     function init() {
@@ -32,85 +27,9 @@ const UI = (function() {
         DOM.commentsModal = document.getElementById('commentsModal');
         DOM.accountModal = document.getElementById('accountModal');
         DOM.notificationPopup = document.getElementById('notificationPopup');
-        DOM.masterUIContainer = document.getElementById('master-ui-components');
-
-        if (DOM.masterUIContainer) {
-            DOM.masterTopbar = DOM.masterUIContainer.querySelector('.topbar');
-            DOM.masterSidebar = DOM.masterUIContainer.querySelector('.sidebar');
-            DOM.masterBottombar = DOM.masterUIContainer.querySelector('.bottombar');
-            DOM.masterLoginPanel = DOM.masterUIContainer.querySelector('.login-panel');
-            DOM.masterLoggedInMenu = DOM.masterUIContainer.querySelector('.logged-in-menu');
-        }
     }
 
     let alertTimeout;
-    let currentSlideWithUI = null;
-
-    function attachUIToSlide(slideElement) {
-        if (!slideElement || currentSlideWithUI === slideElement) {
-            return;
-        }
-
-        const slideData = slidesData[slideElement.dataset.index];
-        if (!slideData) return;
-
-        // 1. Update content of master UI elements
-        const profileImg = DOM.masterSidebar.querySelector('.profileButton img');
-        if(profileImg) profileImg.src = slideData.avatar;
-
-        const userText = DOM.masterBottombar.querySelector('.text-user');
-        if(userText) userText.textContent = slideData.user;
-
-        const descText = DOM.masterBottombar.querySelector('.text-description');
-        if(descText) descText.textContent = slideData.description;
-
-        const likeBtn = DOM.masterSidebar.querySelector('.like-button');
-        if(likeBtn) {
-            likeBtn.dataset.likeId = slideData.likeId;
-            updateLikeButtonState(likeBtn, slideData.isLiked, slideData.initialLikes);
-        }
-
-        const commentsBtn = DOM.masterSidebar.querySelector('.commentsButton');
-        if(commentsBtn) {
-            commentsBtn.dataset.likeId = slideData.likeId;
-            updateCommentCount(slideData.likeId, slideData.initialComments);
-        }
-
-        // 2. Move master UI into the slide's placeholders
-        const topbarPlaceholder = slideElement.querySelector('.topbar-placeholder');
-        const sidebarPlaceholder = slideElement.querySelector('.sidebar-placeholder');
-        const bottombarPlaceholder = slideElement.querySelector('.bottombar-placeholder');
-
-        if (topbarPlaceholder) {
-            topbarPlaceholder.appendChild(DOM.masterTopbar);
-            topbarPlaceholder.appendChild(DOM.masterLoginPanel);
-            topbarPlaceholder.appendChild(DOM.masterLoggedInMenu);
-        }
-        if (sidebarPlaceholder) {
-            sidebarPlaceholder.appendChild(DOM.masterSidebar);
-        }
-        if (bottombarPlaceholder) {
-            bottombarPlaceholder.appendChild(DOM.masterBottombar);
-        }
-
-        currentSlideWithUI = slideElement;
-    }
-
-    function initMasterUI() {
-        const renderedForm = document.getElementById('um-login-render-container');
-        if (DOM.masterLoginPanel && renderedForm) {
-            DOM.masterLoginPanel.innerHTML = renderedForm.innerHTML;
-            const form = DOM.masterLoginPanel.querySelector('.login-form');
-            if (form) {
-                form.querySelector('label[for="user_login"]')?.remove();
-                form.querySelector('#user_login')?.setAttribute('placeholder', 'Login');
-                form.querySelector('label[for="user_pass"]')?.remove();
-                form.querySelector('#user_pass')?.setAttribute('placeholder', 'Hasło');
-                const submitButton = form.querySelector('#wp-submit');
-                if (submitButton) submitButton.value = 'ENTER';
-            }
-        }
-    }
 
     function showAlert(message, isError = false) {
         if (!DOM.alertBox || !DOM.alertText) return;
@@ -149,7 +68,7 @@ const UI = (function() {
 
     function openModal(modal) {
         State.set('lastFocusedElement', document.activeElement);
-        DOM.container.setAttribute('aria-hidden', 'true');
+        if (DOM.container) DOM.container.setAttribute('aria-hidden', 'true');
         modal.classList.add('visible');
         modal.setAttribute('aria-hidden', 'false');
         const focusable = getFocusable(modal);
@@ -161,7 +80,7 @@ const UI = (function() {
         modal.classList.remove('visible');
         modal.setAttribute('aria-hidden', 'true');
         if (modal._focusTrapDispose) { modal._focusTrapDispose(); delete modal._focusTrapDispose; }
-        DOM.container.removeAttribute('aria-hidden');
+        if (DOM.container) DOM.container.removeAttribute('aria-hidden');
         State.get('lastFocusedElement')?.focus();
     }
 
@@ -187,58 +106,62 @@ const UI = (function() {
         const isLoggedIn = State.get('isUserLoggedIn');
         document.body.classList.toggle('is-logged-in', isLoggedIn);
 
-        // 1. Update the single master UI components
-        DOM.masterTopbar.querySelector('.central-text-wrapper')?.classList.toggle('with-arrow', !isLoggedIn);
-        DOM.masterLoginPanel.classList.remove('active');
-        DOM.masterTopbar.classList.remove('login-panel-active');
-        DOM.masterLoggedInMenu.classList.remove('active');
-        const topbarText = DOM.masterTopbar.querySelector('.topbar-text');
-        if (topbarText) {
-            topbarText.textContent = isLoggedIn ? Utils.getTranslation('loggedInText') : Utils.getTranslation('loggedOutText');
-        }
-
-        // 2. Update the like button state based on the *currently attached* slide's data
-        const likeBtn = DOM.masterSidebar.querySelector('.like-button');
-        if (likeBtn && currentSlideWithUI) {
-            const slideData = slidesData[currentSlideWithUI.dataset.index];
-            if (slideData) {
-                updateLikeButtonState(likeBtn, !!(slideData.isLiked && isLoggedIn), Number(slideData.initialLikes || 0));
-            }
-        }
-
-        // 3. Loop through all sections to update parts that are unique to each slide (e.g., secret overlays)
         document.querySelectorAll('.webyx-section').forEach((section) => {
             const sim = section.querySelector('.tiktok-symulacja');
             if (!sim) return;
+
             sim.classList.toggle('is-logged-in', isLoggedIn);
+
+            const topbarText = section.querySelector('.topbar-text');
+            if (topbarText) {
+                topbarText.textContent = isLoggedIn ? Utils.getTranslation('loggedInText') : Utils.getTranslation('loggedOutText');
+            }
+            section.querySelector('.central-text-wrapper')?.classList.toggle('with-arrow', !isLoggedIn);
+            section.querySelector('.login-panel')?.classList.remove('active');
+            section.querySelector('.topbar')?.classList.remove('login-panel-active');
+            section.querySelector('.logged-in-menu')?.classList.remove('active');
+
+            const likeBtn = section.querySelector('.like-button');
+            if (likeBtn) {
+                const slideData = slidesData.find(s => s.likeId === likeBtn.dataset.likeId);
+                if (slideData) {
+                    updateLikeButtonState(likeBtn, !!(slideData.isLiked && isLoggedIn), Number(slideData.initialLikes || 0));
+                }
+            }
 
             const isSecret = sim.dataset.access === 'secret';
             const showSecretOverlay = isSecret && !isLoggedIn;
-
             section.querySelector('.secret-overlay')?.classList.toggle('visible', showSecretOverlay);
             section.querySelector('.videoPlayer')?.classList.toggle('secret-active', showSecretOverlay);
+
+            const isActive = parseInt(section.dataset.index, 10) === State.get('currentSlideIndex');
+            if (isActive) {
+                VideoManager.updatePlaybackForLoginChange(section);
+            }
         });
     }
 
     function updateTranslations() {
         const lang = State.get('currentLang');
         document.documentElement.lang = lang;
-        document.querySelectorAll('[data-translate-key]').forEach(el => el.textContent = Utils.getTranslation(el.dataset.translateKey));
+        document.querySelectorAll('[data-translate-key]').forEach(el => {
+            el.textContent = Utils.getTranslation(el.dataset.translateKey)
+        });
         document.querySelectorAll('[data-translate-aria-label]').forEach(el => el.setAttribute('aria-label', Utils.getTranslation(el.dataset.translateAriaLabel)));
         document.querySelectorAll('[data-translate-title]').forEach(el => el.setAttribute('title', Utils.getTranslation(el.dataset.translateTitle)));
         updateUIForLoginState();
     }
 
-    function updateCommentCount(likeId, count) {
-        document.querySelectorAll(`.webyx-section .commentsButton[data-like-id="${likeId}"]`).forEach(btn => {
-            let countEl = btn.querySelector('.comment-count');
-            if (!countEl) {
-                countEl = document.createElement('div');
-                countEl.className = 'comment-count icon-label';
-                btn.appendChild(countEl);
-            }
-            countEl.textContent = Utils.formatCount(count);
-        });
+    function updateCommentCount(section, count) {
+        const btn = section.querySelector('.commentsButton');
+        if (!btn) return;
+        let countEl = btn.querySelector('.comment-count');
+        if (!countEl) {
+            countEl = document.createElement('div');
+            countEl.className = 'comment-count icon-label';
+            btn.appendChild(countEl);
+        }
+        countEl.textContent = Utils.formatCount(count);
     }
 
     function formatTimeAgo(date, lang = 'pl') {
@@ -247,9 +170,7 @@ const UI = (function() {
         const minutes = Math.round(seconds / 60);
         const hours = Math.round(minutes / 60);
         const days = Math.round(hours / 24);
-
         const rtf = new Intl.RelativeTimeFormat(lang, { numeric: 'auto' });
-
         if (seconds < 60) return rtf.format(-seconds, 'second');
         if (minutes < 60) return rtf.format(-minutes, 'minute');
         if (hours < 24) return rtf.format(-hours, 'hour');
@@ -262,9 +183,44 @@ const UI = (function() {
         section.dataset.index = index;
         section.dataset.slideId = slideData.id;
 
-        // Set only the data unique to the slide's own structure
-        section.querySelector('.tiktok-symulacja').dataset.access = slideData.access;
-        section.querySelector('.videoPlayer').poster = slideData.poster || Config.LQIP_POSTER;
+        const sim = section.querySelector('.tiktok-symulacja');
+        sim.dataset.access = slideData.access;
+
+        const videoPlayer = section.querySelector('.videoPlayer');
+        videoPlayer.poster = slideData.poster || Config.LQIP_POSTER;
+        VideoManager.initVideoElementListeners(videoPlayer);
+
+        section.querySelector('.profileButton img').src = slideData.avatar;
+        const likeBtn = section.querySelector('.like-button');
+        likeBtn.dataset.likeId = slideData.likeId;
+        updateLikeButtonState(likeBtn, slideData.isLiked, slideData.initialLikes);
+
+        const commentsBtn = section.querySelector('.commentsButton');
+        if(commentsBtn) {
+            commentsBtn.dataset.likeId = slideData.likeId;
+            updateCommentCount(section, slideData.initialComments);
+        }
+
+        section.querySelector('.text-user').textContent = slideData.user;
+        section.querySelector('.text-description').textContent = slideData.description;
+
+        const loginPanel = section.querySelector('.login-panel');
+        const renderedForm = document.getElementById('um-login-render-container');
+        if (loginPanel && renderedForm) {
+            loginPanel.innerHTML = renderedForm.innerHTML;
+            const form = loginPanel.querySelector('.login-form');
+            if (form) {
+                form.querySelector('label[for="user_login"]')?.remove();
+                form.querySelector('#user_login')?.setAttribute('placeholder', 'Login');
+                form.querySelector('label[for="user_pass"]')?.remove();
+                form.querySelector('#user_pass')?.setAttribute('placeholder', 'Hasło');
+                const submitButton = form.querySelector('#wp-submit');
+                if (submitButton) submitButton.value = 'ENTER';
+            }
+        }
+
+        const progressSlider = section.querySelector('.video-progress');
+        VideoManager.initProgressBar(progressSlider, videoPlayer);
 
         return section;
     }
@@ -291,7 +247,7 @@ const UI = (function() {
     }
 
     return {
-        init, // Expose the new init function
+        init,
         DOM,
         showAlert,
         openModal,
@@ -302,8 +258,6 @@ const UI = (function() {
         renderSlides,
         updateCommentCount,
         formatTimeAgo,
-        initMasterUI,
-        attachUIToSlide,
     };
 })();
 

@@ -1,4 +1,3 @@
-<?php
 /**
  * Plik functions.php dla motywu Ting Tong.
  *
@@ -79,144 +78,6 @@ function tt_likes_user_has( $item_id, $user_id ) {
 	);
 }
 
-
-// =========================================================================
-// 1.5. SYSTEM KOMENTARZY (Tabela + API)
-// =========================================================================
-
-/**
- * Tworzy tabelę do przechowywania komentarzy.
- */
-function tt_comments_create_table() {
-	global $wpdb;
-	$table_name      = $wpdb->prefix . 'tt_comments';
-	$charset_collate = $wpdb->get_charset_collate();
-	require_once ABSPATH . 'wp-admin/includes/upgrade.php';
-
-	$sql = "CREATE TABLE {$table_name} (
-        id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
-        post_id BIGINT UNSIGNED NOT NULL,
-        user_id BIGINT UNSIGNED NOT NULL,
-        comment TEXT NOT NULL,
-        created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        PRIMARY KEY (id),
-        KEY idx_post_id (post_id)
-    ) {$charset_collate};";
-
-	dbDelta( $sql );
-	update_option( 'tt_comments_db_version', '1.0' );
-}
-add_action( 'after_switch_theme', 'tt_comments_create_table' );
-
-/** Fallback: upewnij się, że tabela komentarzy istnieje. */
-add_action( 'init', function () {
-	if ( get_option( 'tt_comments_db_version' ) !== '1.0' ) {
-		tt_comments_create_table();
-	}
-} );
-
-/**
- * Pobiera liczbę komentarzy dla posta.
- */
-function tt_comments_get_count( $post_id ) {
-	global $wpdb;
-	return (int) $wpdb->get_var(
-		$wpdb->prepare(
-			"SELECT COUNT(*) FROM {$wpdb->prefix}tt_comments WHERE post_id = %d",
-			$post_id
-		)
-	);
-}
-
-/**
- * Handler AJAX do pobierania komentarzy dla danego posta.
- */
-function tt_get_comments_handler() {
-	check_ajax_referer( 'tt_ajax_nonce', 'nonce' );
-
-	$post_id = isset( $_GET['post_id'] ) ? absint( $_GET['post_id'] ) : 0;
-	if ( ! $post_id ) {
-		wp_send_json_error( [ 'message' => 'Brak ID posta.' ], 400 );
-	}
-
-	global $wpdb;
-	$comments_table = $wpdb->prefix . 'tt_comments';
-	$users_table    = $wpdb->prefix . 'users';
-
-	$results = $wpdb->get_results(
-		$wpdb->prepare(
-			"SELECT c.id, c.comment, c.created_at, u.display_name, u.ID as user_id
-            FROM {$comments_table} c
-            JOIN {$users_table} u ON c.user_id = u.ID
-            WHERE c.post_id = %d
-            ORDER BY c.created_at DESC",
-			$post_id
-		)
-	);
-
-	$comments = [];
-	foreach ( $results as $row ) {
-		$comments[] = [
-			'id'           => $row->id,
-			'text'         => esc_html( $row->comment ),
-			'author'       => esc_html( $row->display_name ),
-			'avatar'       => get_avatar_url( $row->user_id, [ 'size' => 48 ] ),
-			'timestamp'    => $row->created_at,
-			'isOwnComment' => get_current_user_id() === (int) $row->user_id,
-		];
-	}
-
-	wp_send_json_success( $comments );
-}
-add_action( 'wp_ajax_tt_get_comments', 'tt_get_comments_handler' );
-add_action( 'wp_ajax_nopriv_tt_get_comments', 'tt_get_comments_handler' );
-
-
-/**
- * Handler AJAX do dodawania nowego komentarza.
- */
-function tt_add_comment_handler() {
-	check_ajax_referer( 'tt_ajax_nonce', 'nonce' );
-
-	if ( ! is_user_logged_in() ) {
-		wp_send_json_error( [ 'message' => 'Musisz się zalogować, aby komentować.' ], 401 );
-	}
-
-	$post_id = isset( $_POST['post_id'] ) ? absint( $_POST['post_id'] ) : 0;
-	$comment = isset( $_POST['comment'] ) ? sanitize_textarea_field( $_POST['comment'] ) : '';
-
-	if ( ! $post_id || empty( $comment ) ) {
-		wp_send_json_error( [ 'message' => 'Brakujące dane.' ], 400 );
-	}
-
-	global $wpdb;
-	$table_name = $wpdb->prefix . 'tt_comments';
-	$user_id    = get_current_user_id();
-
-	$result = $wpdb->insert(
-		$table_name,
-		[
-			'post_id' => $post_id,
-			'user_id' => $user_id,
-			'comment' => $comment,
-		],
-		[ '%d', '%d', '%s' ]
-	);
-
-	if ( false === $result ) {
-		wp_send_json_error( [ 'message' => 'Nie udało się dodać komentarza.' ], 500 );
-	}
-
-	wp_send_json_success(
-		[
-			'message'      => 'Komentarz dodany!',
-			'newCount'     => tt_comments_get_count( $post_id ),
-		]
-	);
-}
-add_action( 'wp_ajax_tt_add_comment', 'tt_add_comment_handler' );
-
-
 // =========================================================================
 // 2. PRZYGOTOWANIE I PRZEKAZANIE DANYCH DO JAVASCRIPT
 // =========================================================================
@@ -227,34 +88,63 @@ add_action( 'wp_ajax_tt_add_comment', 'tt_add_comment_handler' );
 function tt_get_slides_data() {
 	$user_id = get_current_user_id(); // 0 jeśli gość
 
-	// Wczytujemy dane slajdów z pliku JSON.
-	$json_file_path  = get_template_directory() . '/slides.json';
-	$simulated_posts = [];
-	if ( file_exists( $json_file_path ) ) {
-		$json_content = file_get_contents( $json_file_path );
-		// Dekodujemy JSON do tablicy asocjacyjnej (drugi argument `true`).
-		$simulated_posts = json_decode( $json_content, true );
-	}
+	// Symulujemy pobieranie postów z bazy danych
+	$simulated_posts = [
+		[
+			'post_id'      => 1,
+			'post_title'   => 'Paweł Polutek',
+			'post_content' => 'To jest dynamicznie załadowany opis dla pierwszego slajdu. Działa!',
+			'video_url'    => 'https://pawelperfect.pl/wp-content/uploads/2025/07/17169505-hd_1080_1920_30fps.mp4',
+			'access'       => 'public',
+			'comments'     => 567,
+			'avatar'       => 'https://i.pravatar.cc/100?u=pawel',
+		],
+		[
+			'post_id'      => 2,
+			'post_title'   => 'Web Dev',
+			'post_content' => 'Kolejny slajd, kolejne wideo. #efficiency',
+			'video_url'    => 'https://pawelperfect.pl/wp-content/uploads/2025/07/4434150-hd_1080_1920_30fps-1.mp4',
+			'access'       => 'public',
+			'comments'     => 1245,
+			'avatar'       => 'https://i.pravatar.cc/100?u=webdev',
+		],
+		[
+			'post_id'      => 3,
+			'post_title'   => 'Tajemniczy Tester',
+			'post_content' => 'Ten slajd jest tajny! 🤫',
+			'video_url'    => 'https://pawelperfect.pl/wp-content/uploads/2025/07/4678261-hd_1080_1920_25fps.mp4',
+			'access'       => 'secret',
+			'comments'     => 2,
+			'avatar'       => 'https://i.pravatar.cc/100?u=tester',
+		],
+		[
+			'post_id'      => 4,
+			'post_title'   => 'Artysta AI',
+			'post_content' => 'Generowane przez AI, renderowane przez przeglądarkę. #future',
+			'video_url'    => 'https://pawelperfect.pl/wp-content/uploads/2025/07/AdobeStock_631182722-online-video-cutter.com_.mp4',
+			'access'       => 'public',
+			'comments'     => 890,
+			'avatar'       => 'https://i.pravatar.cc/100?u=ai-artist',
+		],
+	];
 
 	$slides_data = [];
 
-	if ( is_array( $simulated_posts ) ) {
-		foreach ( $simulated_posts as $post ) {
-			$slides_data[] = [
-				'id'              => 'slide-' . str_pad( $post['post_id'], 3, '0', STR_PAD_LEFT ),
-				'likeId'          => (string) $post['post_id'],
-				'user'            => $post['post_title'],
-				'description'     => $post['post_content'],
-				'mp4Url'          => $post['video_url'],
-				'hlsUrl'          => null,
-				'poster'          => '',
-				'avatar'          => $post['avatar'],
-				'access'          => $post['access'],
-				'initialLikes'    => tt_likes_get_count( $post['post_id'] ),
-				'isLiked'         => tt_likes_user_has( $post['post_id'], $user_id ),
-				'initialComments' => tt_comments_get_count( $post['post_id'] ),
-			];
-		}
+	foreach ( $simulated_posts as $post ) {
+		$slides_data[] = [
+			'id'              => 'slide-' . str_pad( $post['post_id'], 3, '0', STR_PAD_LEFT ),
+			'likeId'          => (string) $post['post_id'],
+			'user'            => $post['post_title'],
+			'description'     => $post['post_content'],
+			'mp4Url'          => $post['video_url'],
+			'hlsUrl'          => null,
+			'poster'          => '',
+			'avatar'          => $post['avatar'],
+			'access'          => $post['access'],
+			'initialLikes'    => tt_likes_get_count( $post['post_id'] ),
+			'isLiked'         => tt_likes_user_has( $post['post_id'], $user_id ),
+			'initialComments' => $post['comments'],
+		];
 	}
 
 	return $slides_data;
@@ -264,24 +154,9 @@ function tt_get_slides_data() {
  * Dodaje skrypty i lokalizuje dane dla frontendu.
  */
 function tt_enqueue_and_localize_scripts() {
-	// Dołączanie głównego arkusza stylów aplikacji.
-	wp_enqueue_style(
-		'tt-main-style',
-		get_template_directory_uri() . '/assets/css/style.css',
-		[],
-		'1.0.0'
-	);
+	wp_register_script( 'tt-main-app', false, [], null, true );
+	wp_enqueue_script( 'tt-main-app' );
 
-	// Dołączanie głównego skryptu aplikacji.
-	wp_enqueue_script(
-		'tt-main-app',
-		get_template_directory_uri() . '/assets/js/app.js',
-		[],
-		'1.0.0',
-		true // Ładowanie w stopce.
-	);
-
-	// Przekazywanie danych z PHP do JavaScript (musi być po `wp_enqueue_script`).
 	wp_localize_script(
 		'tt-main-app',
 		'TingTongData',
@@ -299,33 +174,8 @@ function tt_enqueue_and_localize_scripts() {
 			'nonce'    => wp_create_nonce( 'tt_ajax_nonce' ),
 		]
 	);
-
-	// Dołączanie skryptu "Buy Me a Coffee"
-	wp_enqueue_script(
-		'tt-bmc-widget',
-		'https://cdnjs.buymeacoffee.com/1.0.0/widget.prod.min.js',
-		[],
-		'1.0.0',
-		true
-	);
 }
 add_action( 'wp_enqueue_scripts', 'tt_enqueue_and_localize_scripts' );
-
-/**
- * Dodaje atrybuty do tagów skryptów (type="module" dla app.js i data-* dla BMC).
- */
-function tt_add_attributes_to_scripts( $tag, $handle, $src ) {
-	if ( 'tt-main-app' === $handle ) {
-		$tag = '<script type="module" src="' . esc_url( $src ) . '" id="' . esc_attr( $handle ) . '-js"></script>';
-	}
-
-	if ( 'tt-bmc-widget' === $handle ) {
-		$tag = '<script data-name="BMC-Widget" data-cfasync="false" src="' . esc_url( $src ) . '" data-id="pawelperfect" data-description="Support me on Buy me a coffee!" data-message="" data-color="#FF5F5F" data-position="Right" data-x_margin="18" data-y_margin="18"></script>';
-	}
-
-	return $tag;
-}
-add_filter( 'script_loader_tag', 'tt_add_attributes_to_scripts', 10, 3 );
 
 // =========================================================================
 // 3. HANDLERY AJAX (Logowanie, Wylogowanie, Lajkowanie i Nonce)
@@ -471,8 +321,8 @@ add_shortcode( 'tt_login_form', 'tt_login_form_shortcode' );
 /* ========================================================================
  * JEDYNA ZMIANA — TT Konto (AJAX) — BEZ logowania/wylogowania/polubień
  * Ten blok to wyczyszczona wersja sandboxa służąca wyłącznie do obsługi formularza "Konto".
- * Źródło: phpsandbox.txt (obsługa profilu/hasła/avatara/konta)
- * Pozostawiamy bez zmian: funkszynorginal.txt (logowanie, wylogowanie, lajki, nonce)
+ * Źródło: phpsandbox.txt (obsługa profilu/hasła/avatara/konta) :contentReference[oaicite:0]{index=0}
+ * Pozostawiamy bez zmian: funkszynorginal.txt (logowanie, wylogowanie, lajki, nonce) :contentReference[oaicite:1]{index=1}
  * ======================================================================== */
 
 /* ========================================================================
