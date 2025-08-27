@@ -261,7 +261,31 @@ function tt_get_slides_data() {
 }
 
 /**
- * Dodaje skrypty i lokalizuje dane dla frontendu.
+ * Ręcznie wstrzykuje dane początkowe (TingTongData i ajax_object) do <head>.
+ * Jest to obejście problemu, gdzie `wp_localize_script` nie działa poprawnie ze skryptami `type="module"`.
+ */
+function tt_inject_initial_data_script() {
+	$ting_tong_data = [
+		'isLoggedIn' => is_user_logged_in(),
+		'slides'     => tt_get_slides_data(),
+	];
+
+	$ajax_data = [
+		'ajax_url' => admin_url( 'admin-ajax.php' ),
+		'nonce'    => wp_create_nonce( 'tt_ajax_nonce' ),
+	];
+
+	echo '<script type="text/javascript">';
+	echo 'window.TingTongData = ' . wp_json_encode( $ting_tong_data ) . ';';
+	echo 'window.ajax_object = ' . wp_json_encode( $ajax_data ) . ';';
+	echo '</script>';
+}
+add_action( 'wp_head', 'tt_inject_initial_data_script' );
+
+
+/**
+ * Dodaje skrypty i style do kolejki WordPress.
+ * Usunięto `wp_localize_script`, ponieważ dane są teraz wstrzykiwane przez `tt_inject_initial_data_script`.
  */
 function tt_enqueue_and_localize_scripts() {
 	// Dołączanie głównego arkusza stylów aplikacji.
@@ -272,32 +296,13 @@ function tt_enqueue_and_localize_scripts() {
 		'1.0.0'
 	);
 
-	// Dołączanie głównego skryptu aplikacji.
+	// Dołączanie głównego skryptu aplikacji jako modułu.
 	wp_enqueue_script(
 		'tt-main-app',
 		get_template_directory_uri() . '/assets/js/app.js',
 		[],
 		'1.0.0',
 		true // Ładowanie w stopce.
-	);
-
-	// Przekazywanie danych z PHP do JavaScript (musi być po `wp_enqueue_script`).
-	wp_localize_script(
-		'tt-main-app',
-		'TingTongData',
-		[
-			'isLoggedIn' => is_user_logged_in(),
-			'slides'     => tt_get_slides_data(),
-		]
-	);
-
-	wp_localize_script(
-		'tt-main-app',
-		'ajax_object',
-		[
-			'ajax_url' => admin_url( 'admin-ajax.php' ),
-			'nonce'    => wp_create_nonce( 'tt_ajax_nonce' ),
-		]
 	);
 
 	// Dołączanie skryptu "Buy Me a Coffee"
