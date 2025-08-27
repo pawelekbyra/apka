@@ -190,10 +190,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             // Initialize the progress bar for each video, but all pointing to the same master progress bar element.
             const masterProgressSlider = UI.DOM.masterBottombar.querySelector('.video-progress');
-            slideElements.forEach(section => {
-                const videoPlayer = section.querySelector('.videoPlayer');
-                VideoManager.initProgressBar(masterProgressSlider, videoPlayer);
-            });
+            VideoManager.initProgressBar(masterProgressSlider);
 
             UI.updateTranslations();
             const allSections = Array.from(document.querySelectorAll('.webyx-section:not([data-is-clone="true"])'));
