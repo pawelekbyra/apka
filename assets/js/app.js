@@ -183,15 +183,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const slideElements = UI.renderSlides();
 
-            // Attach UI to the first slide initially so it's visible on load
-            if (slideElements.length > 0) {
-                UI.attachUIToSlide(slideElements[0]);
-            }
-
-            // Initialize the progress bar for each video, but all pointing to the same master progress bar element.
-            const masterProgressSlider = UI.DOM.masterBottombar.querySelector('.video-progress');
-            VideoManager.initProgressBar(masterProgressSlider);
-
             UI.updateTranslations();
             const allSections = Array.from(document.querySelectorAll('.webyx-section:not([data-is-clone="true"])'));
             VideoManager.init(allSections, () => {
@@ -258,7 +249,6 @@ document.addEventListener('DOMContentLoaded', () => {
         return {
             init: () => {
                 _setInitialConfig();
-                UI.initMasterUI(); // Initialize the master UI (e.g., login form)
                 initializeHandlers({ fetchAndUpdateSlideData: _fetchAndUpdateSlideData });
                 AccountPanel.init();
                 Comments.init();

@@ -120,18 +120,19 @@ const VideoManager = (function() {
     function _updateProgressUI(video) {
         if (State.get('isDraggingProgress') || !video || !video.duration) return;
         const percent = (video.currentTime / video.duration) * 100;
+        const section = video.closest('.webyx-section');
+        if (!section) return;
 
-        if (UI.DOM.masterBottombar) {
-            const line = UI.DOM.masterBottombar.querySelector('.progress-line');
-            const dot = UI.DOM.masterBottombar.querySelector('.progress-dot');
-            const progressEl = UI.DOM.masterBottombar.querySelector('.video-progress');
-            if (line) line.style.width = `${percent}%`;
-            if (dot) dot.style.left = `${percent}%`;
-            if (progressEl) {
-                progressEl.setAttribute('aria-valuenow', String(Math.round(percent)));
-                if(progressEl.classList.contains('skeleton')) {
-                    progressEl.classList.remove('skeleton');
-                }
+        const line = section.querySelector('.progress-line');
+        const dot = section.querySelector('.progress-dot');
+        const progressEl = section.querySelector('.video-progress');
+
+        if (line) line.style.width = `${percent}%`;
+        if (dot) dot.style.left = `${percent}%`;
+        if (progressEl) {
+            progressEl.setAttribute('aria-valuenow', String(Math.round(percent)));
+            if(progressEl.classList.contains('skeleton')) {
+                progressEl.classList.remove('skeleton');
             }
         }
     };
@@ -142,17 +143,17 @@ const VideoManager = (function() {
         if (oldIndex > -1 && oldIndex < allSections.length) {
             const oldSection = allSections[oldIndex];
             const oldVideo = oldSection.querySelector('.videoPlayer');
-            if (oldVideo) { oldVideo.pause(); _stopProgressUpdates(oldVideo); }
+            if (oldVideo) {
+                oldVideo.pause();
+                _stopProgressUpdates(oldVideo);
+                oldVideo.currentTime = 0; // Reset video progress
+                _updateProgressUI(oldVideo); // Update UI to show reset progress
+            }
             oldSection.querySelector('.pause-icon')?.classList.remove('visible');
-            // The progress bar is now part of the master UI, so we don't need to reset it per slide here.
         }
 
         if (newIndex < allSections.length) {
             const newSection = allSections[newIndex];
-
-            // Attach the master UI to the new active slide
-            UI.attachUIToSlide(newSection);
-
             const newVideo = newSection.querySelector('.videoPlayer');
             const isSecret = newSection.querySelector('.tiktok-symulacja').dataset.access === 'secret';
 
@@ -202,34 +203,26 @@ const VideoManager = (function() {
             videoEl.addEventListener('pause', () => _stopProgressUpdates(videoEl));
             videoEl.addEventListener('timeupdate', () => _updateProgressUI(videoEl));
         },
-        initProgressBar: (progressEl) => {
-            if (!progressEl || progressEl.dataset.initialized) {
+        initProgressBar: (progressEl, videoEl) => {
+            if (!progressEl || !videoEl || progressEl.dataset.initialized) {
                 return;
             }
             progressEl.dataset.initialized = 'true';
             progressEl.classList.add('skeleton');
 
-            const getActiveVideo = () => {
-                const activeSlide = document.querySelector(`.webyx-section[data-index="${State.get('currentSlideIndex')}"]`);
-                return activeSlide ? activeSlide.querySelector('.videoPlayer') : null;
-            };
-
             let pointerId = null;
             const seek = (e) => {
-                const activeVideo = getActiveVideo();
-                if (!activeVideo || !activeVideo.duration) return;
+                if (!videoEl.duration) return;
 
                 const rect = progressEl.getBoundingClientRect();
                 const x = ('clientX' in e ? e.clientX : (e.touches?.[0]?.clientX || 0));
                 const percent = ((x - rect.left) / rect.width) * 100;
                 const clamped = Math.max(0, Math.min(100, percent));
-                activeVideo.currentTime = (clamped / 100) * activeVideo.duration;
-                _updateProgressUI(activeVideo);
+                videoEl.currentTime = (clamped / 100) * videoEl.duration;
+                _updateProgressUI(videoEl);
             };
 
             progressEl.addEventListener('pointerdown', (e) => {
-                const activeVideo = getActiveVideo();
-                if (!activeVideo) return;
                 if (pointerId !== null) return;
                 pointerId = e.pointerId;
                 State.set('isDraggingProgress', true);
@@ -244,32 +237,29 @@ const VideoManager = (function() {
             });
 
             const endDrag = (e) => {
-                const activeVideo = getActiveVideo();
-                if (!activeVideo) return;
                 if (e.pointerId !== pointerId) return;
                 pointerId = null;
                 State.set('isDraggingProgress', false);
                 progressEl.classList.remove('dragging');
-                _startProgressUpdates(activeVideo);
+                _startProgressUpdates(videoEl);
             };
             progressEl.addEventListener('pointerup', endDrag);
             progressEl.addEventListener('pointercancel', endDrag);
 
             progressEl.addEventListener('keydown', (e) => {
-                const activeVideo = getActiveVideo();
-                if (!activeVideo || !activeVideo.duration) return;
+                if (!videoEl.duration) return;
 
-                const step = activeVideo.duration * 0.05;
+                const step = videoEl.duration * 0.05;
                 let newTime;
                 switch (e.key) {
-                    case 'ArrowLeft': newTime = activeVideo.currentTime - step; break;
-                    case 'ArrowRight': newTime = activeVideo.currentTime + step; break;
+                    case 'ArrowLeft': newTime = videoEl.currentTime - step; break;
+                    case 'ArrowRight': newTime = videoEl.currentTime + step; break;
                     case 'Home': newTime = 0; break;
-                    case 'End': newTime = activeVideo.duration; break;
+                    case 'End': newTime = videoEl.duration; break;
                     default: return;
                 }
-                activeVideo.currentTime = Math.max(0, Math.min(newTime, activeVideo.duration));
-                _updateProgressUI(activeVideo);
+                videoEl.currentTime = Math.max(0, Math.min(newTime, videoEl.duration));
+                _updateProgressUI(videoEl);
                 e.preventDefault();
             });
         },
