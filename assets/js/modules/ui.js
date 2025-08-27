@@ -128,6 +128,33 @@ const UI = (function() {
         updateUIForLoginState();
     }
 
+    function updateCommentCount(likeId, count) {
+        document.querySelectorAll(`.webyx-section .commentsButton[data-like-id="${likeId}"]`).forEach(btn => {
+            let countEl = btn.querySelector('.comment-count');
+            if (!countEl) {
+                countEl = document.createElement('div');
+                countEl.className = 'comment-count icon-label';
+                btn.appendChild(countEl);
+            }
+            countEl.textContent = Utils.formatCount(count);
+        });
+    }
+
+    function formatTimeAgo(date, lang = 'pl') {
+        const now = new Date();
+        const seconds = Math.round((now - date) / 1000);
+        const minutes = Math.round(seconds / 60);
+        const hours = Math.round(minutes / 60);
+        const days = Math.round(hours / 24);
+
+        const rtf = new Intl.RelativeTimeFormat(lang, { numeric: 'auto' });
+
+        if (seconds < 60) return rtf.format(-seconds, 'second');
+        if (minutes < 60) return rtf.format(-minutes, 'minute');
+        if (hours < 24) return rtf.format(-hours, 'hour');
+        return rtf.format(-days, 'day');
+    }
+
     function createSlideElement(slideData, index) {
         const slideFragment = DOM.template.content.cloneNode(true);
         const section = slideFragment.querySelector('.webyx-section');
@@ -158,6 +185,11 @@ const UI = (function() {
         const likeBtn = section.querySelector('.like-button');
         likeBtn.dataset.likeId = slideData.likeId;
         updateLikeButtonState(likeBtn, slideData.isLiked, slideData.initialLikes);
+
+        const commentsBtn = section.querySelector('.commentsButton');
+        commentsBtn.dataset.likeId = slideData.likeId;
+        updateCommentCount(slideData.likeId, slideData.initialComments);
+
 
         return section;
     }
@@ -191,7 +223,9 @@ const UI = (function() {
         updateUIForLoginState,
         updateTranslations,
         applyLikeStateToDom,
-        renderSlides
+        renderSlides,
+        updateCommentCount,
+        formatTimeAgo,
     };
 })();
 

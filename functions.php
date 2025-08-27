@@ -79,6 +79,144 @@ function tt_likes_user_has( $item_id, $user_id ) {
 	);
 }
 
+
+// =========================================================================
+// 1.5. SYSTEM KOMENTARZY (Tabela + API)
+// =========================================================================
+
+/**
+ * Tworzy tabelę do przechowywania komentarzy.
+ */
+function tt_comments_create_table() {
+	global $wpdb;
+	$table_name      = $wpdb->prefix . 'tt_comments';
+	$charset_collate = $wpdb->get_charset_collate();
+	require_once ABSPATH . 'wp-admin/includes/upgrade.php';
+
+	$sql = "CREATE TABLE {$table_name} (
+        id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+        post_id BIGINT UNSIGNED NOT NULL,
+        user_id BIGINT UNSIGNED NOT NULL,
+        comment TEXT NOT NULL,
+        created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (id),
+        KEY idx_post_id (post_id)
+    ) {$charset_collate};";
+
+	dbDelta( $sql );
+	update_option( 'tt_comments_db_version', '1.0' );
+}
+add_action( 'after_switch_theme', 'tt_comments_create_table' );
+
+/** Fallback: upewnij się, że tabela komentarzy istnieje. */
+add_action( 'init', function () {
+	if ( get_option( 'tt_comments_db_version' ) !== '1.0' ) {
+		tt_comments_create_table();
+	}
+} );
+
+/**
+ * Pobiera liczbę komentarzy dla posta.
+ */
+function tt_comments_get_count( $post_id ) {
+	global $wpdb;
+	return (int) $wpdb->get_var(
+		$wpdb->prepare(
+			"SELECT COUNT(*) FROM {$wpdb->prefix}tt_comments WHERE post_id = %d",
+			$post_id
+		)
+	);
+}
+
+/**
+ * Handler AJAX do pobierania komentarzy dla danego posta.
+ */
+function tt_get_comments_handler() {
+	check_ajax_referer( 'tt_ajax_nonce', 'nonce' );
+
+	$post_id = isset( $_GET['post_id'] ) ? absint( $_GET['post_id'] ) : 0;
+	if ( ! $post_id ) {
+		wp_send_json_error( [ 'message' => 'Brak ID posta.' ], 400 );
+	}
+
+	global $wpdb;
+	$comments_table = $wpdb->prefix . 'tt_comments';
+	$users_table    = $wpdb->prefix . 'users';
+
+	$results = $wpdb->get_results(
+		$wpdb->prepare(
+			"SELECT c.id, c.comment, c.created_at, u.display_name, u.ID as user_id
+            FROM {$comments_table} c
+            JOIN {$users_table} u ON c.user_id = u.ID
+            WHERE c.post_id = %d
+            ORDER BY c.created_at DESC",
+			$post_id
+		)
+	);
+
+	$comments = [];
+	foreach ( $results as $row ) {
+		$comments[] = [
+			'id'           => $row->id,
+			'text'         => esc_html( $row->comment ),
+			'author'       => esc_html( $row->display_name ),
+			'avatar'       => get_avatar_url( $row->user_id, [ 'size' => 48 ] ),
+			'timestamp'    => $row->created_at,
+			'isOwnComment' => get_current_user_id() === (int) $row->user_id,
+		];
+	}
+
+	wp_send_json_success( $comments );
+}
+add_action( 'wp_ajax_tt_get_comments', 'tt_get_comments_handler' );
+add_action( 'wp_ajax_nopriv_tt_get_comments', 'tt_get_comments_handler' );
+
+
+/**
+ * Handler AJAX do dodawania nowego komentarza.
+ */
+function tt_add_comment_handler() {
+	check_ajax_referer( 'tt_ajax_nonce', 'nonce' );
+
+	if ( ! is_user_logged_in() ) {
+		wp_send_json_error( [ 'message' => 'Musisz się zalogować, aby komentować.' ], 401 );
+	}
+
+	$post_id = isset( $_POST['post_id'] ) ? absint( $_POST['post_id'] ) : 0;
+	$comment = isset( $_POST['comment'] ) ? sanitize_textarea_field( $_POST['comment'] ) : '';
+
+	if ( ! $post_id || empty( $comment ) ) {
+		wp_send_json_error( [ 'message' => 'Brakujące dane.' ], 400 );
+	}
+
+	global $wpdb;
+	$table_name = $wpdb->prefix . 'tt_comments';
+	$user_id    = get_current_user_id();
+
+	$result = $wpdb->insert(
+		$table_name,
+		[
+			'post_id' => $post_id,
+			'user_id' => $user_id,
+			'comment' => $comment,
+		],
+		[ '%d', '%d', '%s' ]
+	);
+
+	if ( false === $result ) {
+		wp_send_json_error( [ 'message' => 'Nie udało się dodać komentarza.' ], 500 );
+	}
+
+	wp_send_json_success(
+		[
+			'message'      => 'Komentarz dodany!',
+			'newCount'     => tt_comments_get_count( $post_id ),
+		]
+	);
+}
+add_action( 'wp_ajax_tt_add_comment', 'tt_add_comment_handler' );
+
+
 // =========================================================================
 // 2. PRZYGOTOWANIE I PRZEKAZANIE DANYCH DO JAVASCRIPT
 // =========================================================================
@@ -114,7 +252,7 @@ function tt_get_slides_data() {
 				'access'          => $post['access'],
 				'initialLikes'    => tt_likes_get_count( $post['post_id'] ),
 				'isLiked'         => tt_likes_user_has( $post['post_id'], $user_id ),
-				'initialComments' => $post['comments'],
+				'initialComments' => tt_comments_get_count( $post['post_id'] ),
 			];
 		}
 	}
