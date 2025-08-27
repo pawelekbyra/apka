@@ -155,9 +155,23 @@ function tt_get_slides_data() {
  * Dodaje skrypty i lokalizuje dane dla frontendu.
  */
 function tt_enqueue_and_localize_scripts() {
-	wp_register_script( 'tt-main-app', false, [], null, true );
-	wp_enqueue_script( 'tt-main-app' );
+	// Właściwe kolejkowanie stylów i skryptów
+	wp_enqueue_style(
+		'tt-main-style',
+		get_template_directory_uri() . '/assets/css/style.css',
+		[],
+		null // Wersja może być dodana później, np. filemtime() dla cache-busting
+	);
 
+	wp_enqueue_script(
+		'tt-main-app',
+		get_template_directory_uri() . '/assets/js/app.js',
+		[],   // Zależności (np. 'jquery')
+		null, // Wersja
+		true  // Ładowanie w stopce
+	);
+
+	// Dane przekazywane do skryptu 'tt-main-app'
 	wp_localize_script(
 		'tt-main-app',
 		'TingTongData',
