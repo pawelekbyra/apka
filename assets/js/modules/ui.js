@@ -4,24 +4,44 @@ import { slidesData, Config } from './config.js';
 
 const UI = (function() {
     const DOM = {
-        container: document.getElementById('webyx-container'),
-        template: document.getElementById('slide-template'),
-        preloader: document.getElementById('preloader'),
-        alertBox: document.getElementById('alertBox'),
-        alertText: document.getElementById('alertText'),
-        infoModal: document.getElementById('infoModal'),
-        commentsModal: document.getElementById('commentsModal'),
-        accountModal: document.getElementById('accountModal'),
-        notificationPopup: document.getElementById('notificationPopup'),
-        masterUIContainer: document.getElementById('master-ui-components'),
+        container: null,
+        template: null,
+        preloader: null,
+        alertBox: null,
+        alertText: null,
+        infoModal: null,
+        commentsModal: null,
+        accountModal: null,
+        notificationPopup: null,
+        masterUIContainer: null,
+        masterTopbar: null,
+        masterSidebar: null,
+        masterBottombar: null,
+        masterLoginPanel: null,
+        masterLoggedInMenu: null,
     };
 
-    // Lazy load master components
-    DOM.masterTopbar = DOM.masterUIContainer.querySelector('.topbar');
-    DOM.masterSidebar = DOM.masterUIContainer.querySelector('.sidebar');
-    DOM.masterBottombar = DOM.masterUIContainer.querySelector('.bottombar');
-    DOM.masterLoginPanel = DOM.masterUIContainer.querySelector('.login-panel');
-    DOM.masterLoggedInMenu = DOM.masterUIContainer.querySelector('.logged-in-menu');
+    function init() {
+        // Query for all DOM elements once the DOM is ready
+        DOM.container = document.getElementById('webyx-container');
+        DOM.template = document.getElementById('slide-template');
+        DOM.preloader = document.getElementById('preloader');
+        DOM.alertBox = document.getElementById('alertBox');
+        DOM.alertText = document.getElementById('alertText');
+        DOM.infoModal = document.getElementById('infoModal');
+        DOM.commentsModal = document.getElementById('commentsModal');
+        DOM.accountModal = document.getElementById('accountModal');
+        DOM.notificationPopup = document.getElementById('notificationPopup');
+        DOM.masterUIContainer = document.getElementById('master-ui-components');
+
+        if (DOM.masterUIContainer) {
+            DOM.masterTopbar = DOM.masterUIContainer.querySelector('.topbar');
+            DOM.masterSidebar = DOM.masterUIContainer.querySelector('.sidebar');
+            DOM.masterBottombar = DOM.masterUIContainer.querySelector('.bottombar');
+            DOM.masterLoginPanel = DOM.masterUIContainer.querySelector('.login-panel');
+            DOM.masterLoggedInMenu = DOM.masterUIContainer.querySelector('.logged-in-menu');
+        }
+    }
 
     let alertTimeout;
     let currentSlideWithUI = null;
@@ -165,9 +185,28 @@ const UI = (function() {
 
     function updateUIForLoginState() {
         const isLoggedIn = State.get('isUserLoggedIn');
-
         document.body.classList.toggle('is-logged-in', isLoggedIn);
 
+        // 1. Update the single master UI components
+        DOM.masterTopbar.querySelector('.central-text-wrapper')?.classList.toggle('with-arrow', !isLoggedIn);
+        DOM.masterLoginPanel.classList.remove('active');
+        DOM.masterTopbar.classList.remove('login-panel-active');
+        DOM.masterLoggedInMenu.classList.remove('active');
+        const topbarText = DOM.masterTopbar.querySelector('.topbar-text');
+        if (topbarText) {
+            topbarText.textContent = isLoggedIn ? Utils.getTranslation('loggedInText') : Utils.getTranslation('loggedOutText');
+        }
+
+        // 2. Update the like button state based on the *currently attached* slide's data
+        const likeBtn = DOM.masterSidebar.querySelector('.like-button');
+        if (likeBtn && currentSlideWithUI) {
+            const slideData = slidesData[currentSlideWithUI.dataset.index];
+            if (slideData) {
+                updateLikeButtonState(likeBtn, !!(slideData.isLiked && isLoggedIn), Number(slideData.initialLikes || 0));
+            }
+        }
+
+        // 3. Loop through all sections to update parts that are unique to each slide (e.g., secret overlays)
         document.querySelectorAll('.webyx-section').forEach((section) => {
             const sim = section.querySelector('.tiktok-symulacja');
             if (!sim) return;
@@ -178,20 +217,6 @@ const UI = (function() {
 
             section.querySelector('.secret-overlay')?.classList.toggle('visible', showSecretOverlay);
             section.querySelector('.videoPlayer')?.classList.toggle('secret-active', showSecretOverlay);
-            section.querySelector('.topbar .central-text-wrapper')?.classList.toggle('with-arrow', !isLoggedIn);
-            section.querySelector('.login-panel')?.classList.remove('active');
-            section.querySelector('.topbar')?.classList.remove('login-panel-active');
-            section.querySelector('.logged-in-menu')?.classList.remove('active');
-            const topbarText = section.querySelector('.topbar .topbar-text');
-            if(topbarText) topbarText.textContent = isLoggedIn ? Utils.getTranslation('loggedInText') : Utils.getTranslation('loggedOutText');
-
-            const likeBtn = section.querySelector('.like-button');
-            if (likeBtn) {
-                const slide = slidesData.find(s => String(s.likeId) === String(likeBtn.dataset.likeId));
-                if (slide) {
-                    updateLikeButtonState(likeBtn, !!(slide.isLiked && isLoggedIn), Number(slide.initialLikes || 0));
-                }
-            }
         });
     }
 
@@ -266,6 +291,7 @@ const UI = (function() {
     }
 
     return {
+        init, // Expose the new init function
         DOM,
         showAlert,
         openModal,

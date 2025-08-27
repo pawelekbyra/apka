@@ -158,6 +158,9 @@ import Comments from './modules/comments.js';
 import { initializeHandlers } from './modules/handlers.js';
 
 document.addEventListener('DOMContentLoaded', () => {
+    // Initialize UI module first to ensure DOM elements are ready.
+    UI.init();
+
     const App = (function() {
         async function _fetchAndUpdateSlideData() {
             const json = await API.fetchSlidesData();
@@ -180,13 +183,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const slideElements = UI.renderSlides();
 
-            // Attach UI to the first slide initially
+            // Attach UI to the first slide initially so it's visible on load
             if (slideElements.length > 0) {
                 UI.attachUIToSlide(slideElements[0]);
-                // Since progress bar is now a single master instance, initialize it once.
-                const firstVideoPlayer = slideElements[0].querySelector('.videoPlayer');
-                VideoManager.initProgressBar(UI.DOM.masterBottombar.querySelector('.video-progress'), firstVideoPlayer);
             }
+
+            // Initialize the progress bar for each video, but all pointing to the same master progress bar element.
+            const masterProgressSlider = UI.DOM.masterBottombar.querySelector('.video-progress');
+            slideElements.forEach(section => {
+                const videoPlayer = section.querySelector('.videoPlayer');
+                VideoManager.initProgressBar(masterProgressSlider, videoPlayer);
+            });
 
             UI.updateTranslations();
             const allSections = Array.from(document.querySelectorAll('.webyx-section:not([data-is-clone="true"])'));
