@@ -158,6 +158,9 @@ import Comments from './modules/comments.js';
 import { initializeHandlers } from './modules/handlers.js';
 
 document.addEventListener('DOMContentLoaded', () => {
+    // Initialize UI module first to ensure DOM elements are ready.
+    UI.init();
+
     const App = (function() {
         async function _fetchAndUpdateSlideData() {
             const json = await API.fetchSlidesData();
@@ -179,10 +182,17 @@ document.addEventListener('DOMContentLoaded', () => {
             localStorage.setItem('tt_lang', selectedLang);
 
             const slideElements = UI.renderSlides();
+
+            // Attach UI to the first slide initially so it's visible on load
+            if (slideElements.length > 0) {
+                UI.attachUIToSlide(slideElements[0]);
+            }
+
+            // Initialize the progress bar for each video, but all pointing to the same master progress bar element.
+            const masterProgressSlider = UI.DOM.masterBottombar.querySelector('.video-progress');
             slideElements.forEach(section => {
-                const progressSlider = section.querySelector('.video-progress');
                 const videoPlayer = section.querySelector('.videoPlayer');
-                VideoManager.initProgressBar(progressSlider, videoPlayer);
+                VideoManager.initProgressBar(masterProgressSlider, videoPlayer);
             });
 
             UI.updateTranslations();
@@ -251,6 +261,7 @@ document.addEventListener('DOMContentLoaded', () => {
         return {
             init: () => {
                 _setInitialConfig();
+                UI.initMasterUI(); // Initialize the master UI (e.g., login form)
                 initializeHandlers({ fetchAndUpdateSlideData: _fetchAndUpdateSlideData });
                 AccountPanel.init();
                 Comments.init();

@@ -30,58 +30,66 @@
                     <h2 class="secret-title" data-translate-key="secretTitle">Top Secret</h2>
                     <p class="secret-subtitle" data-translate-key="secretSubtitle">Log in to unlock</p>
                 </div>
-                <div class="topbar" data-view="default">
-                    <button class="topbar-icon-btn hamburger-icon" data-action="toggle-main-menu" data-translate-aria-label="menuAriaLabel" aria-label="Menu"><svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><path d="M3 12h18M3 6h18M3 18h18"></path></svg></button>
-                    <button class="topbar-central-trigger" data-action="toggle-login-panel"><div class="central-text-wrapper"><span class="topbar-text"></span></div></button>
-                    <button class="topbar-icon-btn notification-bell" data-action="toggle-notifications" data-translate-aria-label="notificationAriaLabel" aria-label="Powiadomienia"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path><path d="M13.73 21a2 2 0 0 1-3.46 0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg><div class="notification-dot"></div></button>
-                </div>
-                <div class="login-panel" aria-hidden="true">
-                    <!-- Content will be injected by JS -->
-                </div>
-                <div class="logged-in-menu" aria-hidden="true">
-                    <a href="#" data-action="open-account-modal" class="accountMenuButton" data-translate-key="accountMenuButton">Konto</a>
-                    <a href="#" data-action="logout" class="logout-link" data-translate-key="logoutLink">Wyloguj</a>
-                </div>
-                <div class="sidebar">
-                    <div class="profile">
-                        <button class="profileButton" data-action="subscribe" data-translate-alert="subscribeAlert" data-translate-aria-label="subscribeAriaLabel" aria-label="Subskrybuj"><img src="" alt="Profil" loading="lazy" decoding="async" /></button>
-                        <div class="plus" aria-hidden="true">+</div>
-                    </div>
-                    <button class="icon-button like-button" data-action="toggle-like" data-like-id="" data-translate-alert="likeAlert" data-translate-aria-label="likeAriaLabel" aria-label="Polub" aria-pressed="false">
-                        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
-                        <div class="like-count icon-label">0</div>
-                    </button>
-                    <button class="icon-button commentsButton" data-action="open-comments-modal" aria-controls="commentsModal" data-translate-aria-label="commentsAriaLabel" aria-label="Komentarze">
-                        <svg viewBox="0 0 24 24" aria-hidden="true">
-                            <path d="M21 15a4 4 0 0 1-4 4H8l-5 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4z"/>
-                        </svg>
-                    </button>
-                    <button class="icon-button shareButton" data-action="share" data-translate-title="shareTitle" data-translate-aria-label="shareAriaLabel"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l6 6-6 6M21 11H9a6 6 0 0 0-6 6" /></svg><div class="icon-label" data-translate-key="shareText">Szeruj</div></button>
-                    <button class="icon-button infoButton" data-action="open-info-modal" data-translate-title="infoTitle" data-translate-aria-label="infoAriaLabel" aria-controls="infoModal"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="16" height="16" /><line x1="8" y1="8" x2="16" y2="8" /><line x1="8" y1="12" x2="16" y2="12" /><line x1="8" y1="16" x2="12" y2="16" /></svg><div class="icon-label" data-translate-key="infoText">Info</div></button>
-                    <button class="icon-button languageButton" data-action="toggle-language" data-translate-aria-label="languageAriaLabel">
-                        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10" stroke-width="1.5" fill="none"/><line x1="2" y1="12" x2="22" y2="12" stroke-width="1.5"/><ellipse cx="12" cy="12" rx="4" ry="10" stroke-width="1.5" fill="none"/></svg>
-                        <div class="icon-label language-label" data-translate-key="languageText">PL</div>
-                    </button>
-                    <button class="icon-button tipButton" data-action="show-tip-jar" data-translate-title="tipTitle" data-translate-aria-label="tipAriaLabel">
-                        <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="2" y="7" width="20" height="12" rx="2" ry="2" /><path d="M2 10h20" /><circle cx="18" cy="13" r="2" /></svg>
-                        <div class="icon-label" data-translate-key="tipText">Napiwek</div>
-                    </button>
-                </div>
-                <div class="bottombar">
-                    <div class="video-progress" tabindex="0" role="slider" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-label="Postęp wideo">
-                        <div class="progress-line"></div>
-                        <div class="progress-dot"></div>
-                    </div>
-                    <div class="text-info">
-                        <div class="text-user"></div>
-                        <div class="text-description"></div>
-                    </div>
-                </div>
+                <!-- UI Placeholders -->
+                <div class="topbar-placeholder"></div>
+                <div class="sidebar-placeholder"></div>
+                <div class="bottombar-placeholder"></div>
             </div>
         </div>
     </template>
     <!-- Główny kontener na slajdy -->
     <div id="webyx-container"></div>
+
+    <!-- Master UI Components (Single Instance) -->
+    <div id="master-ui-components" style="display: none;">
+        <div class="topbar" data-view="default">
+            <button class="topbar-icon-btn hamburger-icon" data-action="toggle-main-menu" data-translate-aria-label="menuAriaLabel" aria-label="Menu"><svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><path d="M3 12h18M3 6h18M3 18h18"></path></svg></button>
+            <button class="topbar-central-trigger" data-action="toggle-login-panel"><div class="central-text-wrapper"><span class="topbar-text"></span></div></button>
+            <button class="topbar-icon-btn notification-bell" data-action="toggle-notifications" data-translate-aria-label="notificationAriaLabel" aria-label="Powiadomienia"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path><path d="M13.73 21a2 2 0 0 1-3.46 0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg><div class="notification-dot"></div></button>
+        </div>
+        <div class="login-panel" aria-hidden="true">
+            <!-- Content will be injected by JS -->
+        </div>
+        <div class="logged-in-menu" aria-hidden="true">
+            <a href="#" data-action="open-account-modal" class="accountMenuButton" data-translate-key="accountMenuButton">Konto</a>
+            <a href="#" data-action="logout" class="logout-link" data-translate-key="logoutLink">Wyloguj</a>
+        </div>
+        <div class="sidebar">
+            <div class="profile">
+                <button class="profileButton" data-action="subscribe" data-translate-alert="subscribeAlert" data-translate-aria-label="subscribeAriaLabel" aria-label="Subskrybuj"><img src="" alt="Profil" loading="lazy" decoding="async" /></button>
+                <div class="plus" aria-hidden="true">+</div>
+            </div>
+            <button class="icon-button like-button" data-action="toggle-like" data-like-id="" data-translate-alert="likeAlert" data-translate-aria-label="likeAriaLabel" aria-label="Polub" aria-pressed="false">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
+                <div class="like-count icon-label">0</div>
+            </button>
+            <button class="icon-button commentsButton" data-action="open-comments-modal" aria-controls="commentsModal" data-translate-aria-label="commentsAriaLabel" aria-label="Komentarze">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M21 15a4 4 0 0 1-4 4H8l-5 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4z"/>
+                </svg>
+            </button>
+            <button class="icon-button shareButton" data-action="share" data-translate-title="shareTitle" data-translate-aria-label="shareAriaLabel"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l6 6-6 6M21 11H9a6 6 0 0 0-6 6" /></svg><div class="icon-label" data-translate-key="shareText">Szeruj</div></button>
+            <button class="icon-button infoButton" data-action="open-info-modal" data-translate-title="infoTitle" data-translate-aria-label="infoAriaLabel" aria-controls="infoModal"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="16" height="16" /><line x1="8" y1="8" x2="16" y2="8" /><line x1="8" y1="12" x2="16" y2="12" /><line x1="8" y1="16" x2="12" y2="16" /></svg><div class="icon-label" data-translate-key="infoText">Info</div></button>
+            <button class="icon-button languageButton" data-action="toggle-language" data-translate-aria-label="languageAriaLabel">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10" stroke-width="1.5" fill="none"/><line x1="2" y1="12" x2="22" y2="12" stroke-width="1.5"/><ellipse cx="12" cy="12" rx="4" ry="10" stroke-width="1.5" fill="none"/></svg>
+                <div class="icon-label language-label" data-translate-key="languageText">PL</div>
+            </button>
+            <button class="icon-button tipButton" data-action="show-tip-jar" data-translate-title="tipTitle" data-translate-aria-label="tipAriaLabel">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="2" y="7" width="20" height="12" rx="2" ry="2" /><path d="M2 10h20" /><circle cx="18" cy="13" r="2" /></svg>
+                <div class="icon-label" data-translate-key="tipText">Napiwek</div>
+            </button>
+        </div>
+        <div class="bottombar">
+            <div class="video-progress" tabindex="0" role="slider" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-label="Postęp wideo">
+                <div class="progress-line"></div>
+                <div class="progress-dot"></div>
+            </div>
+            <div class="text-info">
+                <div class="text-user"></div>
+                <div class="text-description"></div>
+            </div>
+        </div>
+    </div>
     <!-- Współdzielone Modale i Alerty -->
     <div id="alertBox" role="status" aria-live="polite">
         <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" style="width:18px; height:18px; stroke:white; stroke-width:2; fill:none; margin-right:6px;"><path d="M6 10V8a6 6 0 1 1 12 0v2" /><rect x="4" y="10" width="16" height="10" rx="2" ry="2" /></svg>
@@ -345,6 +353,6 @@
     <!-- Hidden file input -->
     <input type="file" class="file-input" id="avatarFileInput" accept="image/*">
     <!-- Hidden containers for WordPress to render shortcodes -->
-    <div id="um-login-render-container" class="visually-hidden">[tt_login_form]</div>
+    <div id="um-login-render-container" class="visually-hidden"><?php echo do_shortcode('[tt_login_form]'); ?></div>
 
 <?php get_footer(); ?>
