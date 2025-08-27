@@ -179,11 +179,14 @@ document.addEventListener('DOMContentLoaded', () => {
             localStorage.setItem('tt_lang', selectedLang);
 
             const slideElements = UI.renderSlides();
-            slideElements.forEach(section => {
-                const progressSlider = section.querySelector('.video-progress');
-                const videoPlayer = section.querySelector('.videoPlayer');
-                VideoManager.initProgressBar(progressSlider, videoPlayer);
-            });
+
+            // Attach UI to the first slide initially
+            if (slideElements.length > 0) {
+                UI.attachUIToSlide(slideElements[0]);
+                // Since progress bar is now a single master instance, initialize it once.
+                const firstVideoPlayer = slideElements[0].querySelector('.videoPlayer');
+                VideoManager.initProgressBar(UI.DOM.masterBottombar.querySelector('.video-progress'), firstVideoPlayer);
+            }
 
             UI.updateTranslations();
             const allSections = Array.from(document.querySelectorAll('.webyx-section:not([data-is-clone="true"])'));
@@ -251,6 +254,7 @@ document.addEventListener('DOMContentLoaded', () => {
         return {
             init: () => {
                 _setInitialConfig();
+                UI.initMasterUI(); // Initialize the master UI (e.g., login form)
                 initializeHandlers({ fetchAndUpdateSlideData: _fetchAndUpdateSlideData });
                 AccountPanel.init();
                 Comments.init();

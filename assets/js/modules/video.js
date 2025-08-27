@@ -1,6 +1,7 @@
 import State from './state.js';
 import { Config, slidesData } from './config.js';
 import Utils from './utils.js';
+import UI from './ui.js';
 
 const VideoManager = (function() {
     let hlsPromise = null;
@@ -134,16 +135,15 @@ const VideoManager = (function() {
             const oldVideo = oldSection.querySelector('.videoPlayer');
             if (oldVideo) { oldVideo.pause(); _stopProgressUpdates(oldVideo); }
             oldSection.querySelector('.pause-icon')?.classList.remove('visible');
-            const progressLine = oldSection.querySelector('.progress-line');
-            const progressDot = oldSection.querySelector('.progress-dot');
-            if(progressLine && progressDot) {
-                progressLine.style.width = '0%';
-                progressDot.style.left = '0%';
-            }
+            // The progress bar is now part of the master UI, so we don't need to reset it per slide here.
         }
 
         if (newIndex < allSections.length) {
             const newSection = allSections[newIndex];
+
+            // Attach the master UI to the new active slide
+            UI.attachUIToSlide(newSection);
+
             const newVideo = newSection.querySelector('.videoPlayer');
             const isSecret = newSection.querySelector('.tiktok-symulacja').dataset.access === 'secret';
 

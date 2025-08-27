@@ -13,8 +13,84 @@ const UI = (function() {
         commentsModal: document.getElementById('commentsModal'),
         accountModal: document.getElementById('accountModal'),
         notificationPopup: document.getElementById('notificationPopup'),
+        masterUIContainer: document.getElementById('master-ui-components'),
     };
+
+    // Lazy load master components
+    DOM.masterTopbar = DOM.masterUIContainer.querySelector('.topbar');
+    DOM.masterSidebar = DOM.masterUIContainer.querySelector('.sidebar');
+    DOM.masterBottombar = DOM.masterUIContainer.querySelector('.bottombar');
+    DOM.masterLoginPanel = DOM.masterUIContainer.querySelector('.login-panel');
+    DOM.masterLoggedInMenu = DOM.masterUIContainer.querySelector('.logged-in-menu');
+
     let alertTimeout;
+    let currentSlideWithUI = null;
+
+    function attachUIToSlide(slideElement) {
+        if (!slideElement || currentSlideWithUI === slideElement) {
+            return;
+        }
+
+        const slideData = slidesData[slideElement.dataset.index];
+        if (!slideData) return;
+
+        // 1. Update content of master UI elements
+        const profileImg = DOM.masterSidebar.querySelector('.profileButton img');
+        if(profileImg) profileImg.src = slideData.avatar;
+
+        const userText = DOM.masterBottombar.querySelector('.text-user');
+        if(userText) userText.textContent = slideData.user;
+
+        const descText = DOM.masterBottombar.querySelector('.text-description');
+        if(descText) descText.textContent = slideData.description;
+
+        const likeBtn = DOM.masterSidebar.querySelector('.like-button');
+        if(likeBtn) {
+            likeBtn.dataset.likeId = slideData.likeId;
+            updateLikeButtonState(likeBtn, slideData.isLiked, slideData.initialLikes);
+        }
+
+        const commentsBtn = DOM.masterSidebar.querySelector('.commentsButton');
+        if(commentsBtn) {
+            commentsBtn.dataset.likeId = slideData.likeId;
+            updateCommentCount(slideData.likeId, slideData.initialComments);
+        }
+
+        // 2. Move master UI into the slide's placeholders
+        const topbarPlaceholder = slideElement.querySelector('.topbar-placeholder');
+        const sidebarPlaceholder = slideElement.querySelector('.sidebar-placeholder');
+        const bottombarPlaceholder = slideElement.querySelector('.bottombar-placeholder');
+
+        if (topbarPlaceholder) {
+            topbarPlaceholder.appendChild(DOM.masterTopbar);
+            topbarPlaceholder.appendChild(DOM.masterLoginPanel);
+            topbarPlaceholder.appendChild(DOM.masterLoggedInMenu);
+        }
+        if (sidebarPlaceholder) {
+            sidebarPlaceholder.appendChild(DOM.masterSidebar);
+        }
+        if (bottombarPlaceholder) {
+            bottombarPlaceholder.appendChild(DOM.masterBottombar);
+        }
+
+        currentSlideWithUI = slideElement;
+    }
+
+    function initMasterUI() {
+        const renderedForm = document.getElementById('um-login-render-container');
+        if (DOM.masterLoginPanel && renderedForm) {
+            DOM.masterLoginPanel.innerHTML = renderedForm.innerHTML;
+            const form = DOM.masterLoginPanel.querySelector('.login-form');
+            if (form) {
+                form.querySelector('label[for="user_login"]')?.remove();
+                form.querySelector('#user_login')?.setAttribute('placeholder', 'Login');
+                form.querySelector('label[for="user_pass"]')?.remove();
+                form.querySelector('#user_pass')?.setAttribute('placeholder', 'Hasło');
+                const submitButton = form.querySelector('#wp-submit');
+                if (submitButton) submitButton.value = 'ENTER';
+            }
+        }
+    }
 
     function showAlert(message, isError = false) {
         if (!DOM.alertBox || !DOM.alertText) return;
@@ -161,35 +237,9 @@ const UI = (function() {
         section.dataset.index = index;
         section.dataset.slideId = slideData.id;
 
-        const loginPanel = section.querySelector('.login-panel');
-        const renderedForm = document.getElementById('um-login-render-container');
-        if (loginPanel && renderedForm) {
-            loginPanel.innerHTML = renderedForm.innerHTML;
-            const form = loginPanel.querySelector('.login-form');
-            if (form) {
-                form.querySelector('label[for="user_login"]')?.remove();
-                form.querySelector('#user_login')?.setAttribute('placeholder', 'Login');
-                form.querySelector('label[for="user_pass"]')?.remove();
-                form.querySelector('#user_pass')?.setAttribute('placeholder', 'Hasło');
-                const submitButton = form.querySelector('#wp-submit');
-                if (submitButton) submitButton.value = 'ENTER';
-            }
-        }
-
+        // Set only the data unique to the slide's own structure
         section.querySelector('.tiktok-symulacja').dataset.access = slideData.access;
         section.querySelector('.videoPlayer').poster = slideData.poster || Config.LQIP_POSTER;
-        section.querySelector('.profileButton img').src = slideData.avatar;
-        section.querySelector('.text-user').textContent = slideData.user;
-        section.querySelector('.text-description').textContent = slideData.description;
-
-        const likeBtn = section.querySelector('.like-button');
-        likeBtn.dataset.likeId = slideData.likeId;
-        updateLikeButtonState(likeBtn, slideData.isLiked, slideData.initialLikes);
-
-        const commentsBtn = section.querySelector('.commentsButton');
-        commentsBtn.dataset.likeId = slideData.likeId;
-        updateCommentCount(slideData.likeId, slideData.initialComments);
-
 
         return section;
     }
@@ -226,6 +276,8 @@ const UI = (function() {
         renderSlides,
         updateCommentCount,
         formatTimeAgo,
+        initMasterUI,
+        attachUIToSlide,
     };
 })();
 
