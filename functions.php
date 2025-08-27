@@ -1,4 +1,4 @@
-
+<?php
 /**
  * Plik functions.php dla motywu Ting Tong.
  *
@@ -89,63 +89,34 @@ function tt_likes_user_has( $item_id, $user_id ) {
 function tt_get_slides_data() {
 	$user_id = get_current_user_id(); // 0 jeśli gość
 
-	// Symulujemy pobieranie postów z bazy danych
-	$simulated_posts = [
-		[
-			'post_id'      => 1,
-			'post_title'   => 'Paweł Polutek',
-			'post_content' => 'To jest dynamicznie załadowany opis dla pierwszego slajdu. Działa!',
-			'video_url'    => 'https://pawelperfect.pl/wp-content/uploads/2025/07/17169505-hd_1080_1920_30fps.mp4',
-			'access'       => 'public',
-			'comments'     => 567,
-			'avatar'       => 'https://i.pravatar.cc/100?u=pawel',
-		],
-		[
-			'post_id'      => 2,
-			'post_title'   => 'Web Dev',
-			'post_content' => 'Kolejny slajd, kolejne wideo. #efficiency',
-			'video_url'    => 'https://pawelperfect.pl/wp-content/uploads/2025/07/4434150-hd_1080_1920_30fps-1.mp4',
-			'access'       => 'public',
-			'comments'     => 1245,
-			'avatar'       => 'https://i.pravatar.cc/100?u=webdev',
-		],
-		[
-			'post_id'      => 3,
-			'post_title'   => 'Tajemniczy Tester',
-			'post_content' => 'Ten slajd jest tajny! 🤫',
-			'video_url'    => 'https://pawelperfect.pl/wp-content/uploads/2025/07/4678261-hd_1080_1920_25fps.mp4',
-			'access'       => 'secret',
-			'comments'     => 2,
-			'avatar'       => 'https://i.pravatar.cc/100?u=tester',
-		],
-		[
-			'post_id'      => 4,
-			'post_title'   => 'Artysta AI',
-			'post_content' => 'Generowane przez AI, renderowane przez przeglądarkę. #future',
-			'video_url'    => 'https://pawelperfect.pl/wp-content/uploads/2025/07/AdobeStock_631182722-online-video-cutter.com_.mp4',
-			'access'       => 'public',
-			'comments'     => 890,
-			'avatar'       => 'https://i.pravatar.cc/100?u=ai-artist',
-		],
-	];
+	// Wczytujemy dane slajdów z pliku JSON.
+	$json_file_path  = get_template_directory() . '/slides.json';
+	$simulated_posts = [];
+	if ( file_exists( $json_file_path ) ) {
+		$json_content = file_get_contents( $json_file_path );
+		// Dekodujemy JSON do tablicy asocjacyjnej (drugi argument `true`).
+		$simulated_posts = json_decode( $json_content, true );
+	}
 
 	$slides_data = [];
 
-	foreach ( $simulated_posts as $post ) {
-		$slides_data[] = [
-			'id'              => 'slide-' . str_pad( $post['post_id'], 3, '0', STR_PAD_LEFT ),
-			'likeId'          => (string) $post['post_id'],
-			'user'            => $post['post_title'],
-			'description'     => $post['post_content'],
-			'mp4Url'          => $post['video_url'],
-			'hlsUrl'          => null,
-			'poster'          => '',
-			'avatar'          => $post['avatar'],
-			'access'          => $post['access'],
-			'initialLikes'    => tt_likes_get_count( $post['post_id'] ),
-			'isLiked'         => tt_likes_user_has( $post['post_id'], $user_id ),
-			'initialComments' => $post['comments'],
-		];
+	if ( is_array( $simulated_posts ) ) {
+		foreach ( $simulated_posts as $post ) {
+			$slides_data[] = [
+				'id'              => 'slide-' . str_pad( $post['post_id'], 3, '0', STR_PAD_LEFT ),
+				'likeId'          => (string) $post['post_id'],
+				'user'            => $post['post_title'],
+				'description'     => $post['post_content'],
+				'mp4Url'          => $post['video_url'],
+				'hlsUrl'          => null,
+				'poster'          => '',
+				'avatar'          => $post['avatar'],
+				'access'          => $post['access'],
+				'initialLikes'    => tt_likes_get_count( $post['post_id'] ),
+				'isLiked'         => tt_likes_user_has( $post['post_id'], $user_id ),
+				'initialComments' => $post['comments'],
+			];
+		}
 	}
 
 	return $slides_data;
@@ -155,9 +126,24 @@ function tt_get_slides_data() {
  * Dodaje skrypty i lokalizuje dane dla frontendu.
  */
 function tt_enqueue_and_localize_scripts() {
-	wp_register_script( 'tt-main-app', false, [], null, true );
-	wp_enqueue_script( 'tt-main-app' );
+	// Dołączanie głównego arkusza stylów aplikacji.
+	wp_enqueue_style(
+		'tt-main-style',
+		get_template_directory_uri() . '/assets/css/style.css',
+		[],
+		'1.0.0'
+	);
 
+	// Dołączanie głównego skryptu aplikacji.
+	wp_enqueue_script(
+		'tt-main-app',
+		get_template_directory_uri() . '/assets/js/app.js',
+		[],
+		'1.0.0',
+		true // Ładowanie w stopce.
+	);
+
+	// Przekazywanie danych z PHP do JavaScript (musi być po `wp_enqueue_script`).
 	wp_localize_script(
 		'tt-main-app',
 		'TingTongData',
@@ -177,6 +163,19 @@ function tt_enqueue_and_localize_scripts() {
 	);
 }
 add_action( 'wp_enqueue_scripts', 'tt_enqueue_and_localize_scripts' );
+
+/**
+ * Dodaje atrybut type="module" do naszego głównego skryptu aplikacji.
+ * Jest to niezbędne dla nowoczesnego kodu JavaScript opartego na modułach ES6.
+ */
+function tt_add_module_type_to_script( $tag, $handle, $src ) {
+	if ( 'tt-main-app' === $handle ) {
+		// Tworzymy tag skryptu z atrybutem type="module".
+		$tag = '<script type="module" src="' . esc_url( $src ) . '" id="' . esc_attr( $handle ) . '-js"></script>';
+	}
+	return $tag;
+}
+add_filter( 'script_loader_tag', 'tt_add_module_type_to_script', 10, 3 );
 
 // =========================================================================
 // 3. HANDLERY AJAX (Logowanie, Wylogowanie, Lajkowanie i Nonce)
@@ -322,8 +321,8 @@ add_shortcode( 'tt_login_form', 'tt_login_form_shortcode' );
 /* ========================================================================
  * JEDYNA ZMIANA — TT Konto (AJAX) — BEZ logowania/wylogowania/polubień
  * Ten blok to wyczyszczona wersja sandboxa służąca wyłącznie do obsługi formularza "Konto".
- * Źródło: phpsandbox.txt (obsługa profilu/hasła/avatara/konta) :contentReference[oaicite:0]{index=0}
- * Pozostawiamy bez zmian: funkszynorginal.txt (logowanie, wylogowanie, lajki, nonce) :contentReference[oaicite:1]{index=1}
+ * Źródło: phpsandbox.txt (obsługa profilu/hasła/avatara/konta)
+ * Pozostawiamy bez zmian: funkszynorginal.txt (logowanie, wylogowanie, lajki, nonce)
  * ======================================================================== */
 
 /* ========================================================================
